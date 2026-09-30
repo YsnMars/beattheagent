@@ -104,7 +104,13 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
         )}
       </div>
 
-      {!ended && <AgentCursor moves={moves} cur={cur} speed={speed} step={step} />}
+      {!ended && (
+        <>
+          {/* Frames the screen while the agent is the one driving. */}
+          <div className={`agent-vignette ${playing ? "" : "paused"}`} aria-hidden />
+          <AgentCursor moves={moves} cur={cur} speed={speed} step={step} />
+        </>
+      )}
 
       {ended && (
         <div className="finish" role="dialog" aria-label="Replay finished">
