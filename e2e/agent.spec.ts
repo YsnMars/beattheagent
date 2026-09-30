@@ -20,14 +20,21 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await expect(page.getByTestId("takeaway")).toContainText(/agent/);
   await expect(page.locator(".osplit")).toHaveCount(3);
   await page.getByTestId("watch-agent").click();
-  await expect(page.getByRole("heading", { name: `How ${run.modelLabel} did it` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${run.modelLabel} replay` })).toBeVisible();
 });
 
-test("replay rebuilds the agent's run from its recorded log", async ({ page }, info) => {
+test("replay rebuilds the agent's run from its recorded log at the viewer's size", async ({ page }, info) => {
   await page.goto(`#/replay/${run.seed}`);
   await expect(page.getByRole("heading", { name: new RegExp(run.modelLabel) })).toBeVisible();
+  // The real game UI, not a scaled-down frame: it fills the viewer's own viewport.
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  const width = await page.locator(".replay-stage .game").evaluate((el) => el.getBoundingClientRect().width);
+  expect(width).toBe(page.viewportSize()!.width);
+  // The agent's current step is shown next to its cursor.
+  await expect(page.locator(".agent-step")).toBeVisible();
+  await page.screenshot({ path: `test-results/shots/${info.project.name}-replay-mid.png` });
   // Autoplays in real time; speed it up and let it reach the end.
   await page.getByRole("button", { name: "4×" }).click();
-  await expect(page.locator(".frame-viewport").getByText("Challenge complete")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("dialog", { name: "Replay finished" })).toContainText(`${run.modelLabel} finished in`, { timeout: 20_000 });
   await page.screenshot({ path: `test-results/shots/${info.project.name}-replay.png`, fullPage: true });
 });

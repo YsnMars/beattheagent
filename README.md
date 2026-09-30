@@ -84,10 +84,10 @@ Observed behavior: the hosted browser acts on page elements directly. Every reco
 - **Deterministic seeds** (`src/challenge/generate.ts`): a seed fixes the products, calendars, and sheet. Unit tests check on 300 seeds that exactly one product and exactly one meeting slot are valid, and that the sheet's expected result is unique. Traps include near-miss prices and ratings, off-by-one delivery dates, "Best seller" badges on disqualified items, email case differences, the same email under different companies, and sorting on the wrong key.
 - **Event-sourced runs** (`src/game/run.ts`): all state, including the timer, current stage, and each app's UI, is folded from an append-only log. That gives:
   - **reload-resume** for humans (no resetting the clock by refreshing), and
-  - **exact replays** of the agent: `#/replay/<seed>` re-renders the real game UI at the agent's viewport size (layout uses container queries, so it matches on any screen), moves a ghost cursor to each recorded click target, and shows the hosted-browser screenshots and API activity in sync.
+  - **exact replays** of the agent: `#/replay/<seed>` re-renders the real game UI at the viewer's own screen size (the same layout a player gets, desktop or mobile). Clicks were recorded against `data-trace` elements, so the agent's cursor is re-located in whatever layout is showing, the page scrolls to each target just before the agent reaches it, and the agent's current step (from the API activity) is shown next to the cursor.
 - **Ghost race:** during play, the HUD shows where the recorded agent was at the same elapsed time.
 - **Seeds stay behind the scenes:** `#/` deals a recorded seed at random, preferring ones this browser hasn't seen, and keeps it for the tab so a reload resumes the run. The seed isn't shown anywhere. `#/play/<seed>` still opens a specific challenge; the recorder and tests use it.
-- **After a run:** you see your time next to the agent's, a one-line comparison, per-stage bars, and links to watch the agent's replay or try another challenge.
+- **After a run:** you see your time next to the agent's, a one-line comparison, per-stage times, and links to watch the agent's replay or try another challenge.
 - **Mobile:** every stage adapts to phones (filter chips, single-day calendar with day tabs, horizontally scrolling sheet). The e2e suite runs the full flow on a Pixel 7 viewport.
 
 ## Deploying

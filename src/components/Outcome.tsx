@@ -24,12 +24,10 @@ export function takeaway(human: Timed, agent: RunSummary): string {
 
 /** You-vs-agent summary shown when a run ends. */
 export function Outcome({ human, agent }: { human: RunResult; agent: RunSummary }) {
-  const times = STAGES.flatMap((_, i) => [stageTime(human.splits, i), stageTime(agent.splits, i)]).filter((x): x is number => x !== null);
-  const max = Math.max(1, ...times);
   return (
     <div className="outcome">
       <div className="outcome-times">
-        <div className="side you">
+        <div className="side">
           <span>You</span>
           <b data-testid="final-time">{shown(human)}</b>
           {human.penalties > 0 && (
@@ -47,20 +45,19 @@ export function Outcome({ human, agent }: { human: RunResult; agent: RunSummary 
         {takeaway(human, agent)}
       </p>
       <div className="outcome-splits">
+        <div className="osplit-head">
+          <span />
+          <span>You</span>
+          <span>Agent</span>
+        </div>
         {STAGES.map((s, i) => {
           const h = stageTime(human.splits, i);
           const a = stageTime(agent.splits, i);
           return (
             <div className="osplit" key={s.id}>
-              <span className="osplit-name">{s.title}</span>
-              <span className="obar you">
-                <i style={{ width: h === null ? 0 : `${(h / max) * 100}%` }} />
-              </span>
-              <span className="osplit-val">{h === null ? "—" : gap(h)}</span>
-              <span className="obar agent">
-                <i style={{ width: a === null ? 0 : `${(a / max) * 100}%` }} />
-              </span>
-              <span className="osplit-val">{a === null ? "—" : gap(a)}</span>
+              <span>{s.title}</span>
+              <span>{h === null ? "—" : gap(h)}</span>
+              <span>{a === null ? "—" : gap(a)}</span>
             </div>
           );
         })}

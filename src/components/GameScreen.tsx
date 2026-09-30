@@ -48,12 +48,12 @@ type Props = {
   onSubmit?: () => void;
   onGiveUp?: () => void;
   ghost?: RunSummary | null;
-  ghostLabel?: string;
   overlay?: ReactNode;
-  headerExtra?: ReactNode;
+  /** Replaces the brand in the HUD (the replay puts its back link there). */
+  left?: ReactNode;
 };
 
-export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, ghostLabel, overlay, headerExtra }: Props) {
+export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, overlay, left }: Props) {
   const stageIndex = Math.min(run.stageIndex, STAGES.length - 1);
   const stage = STAGES[stageIndex];
   const elapsed = elapsedAt(run, now);
@@ -69,30 +69,15 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, gho
   return (
     <div className="game">
       <header className="hud">
-        <div className="hud-left">
-          <Brand />
-        </div>
-        <ol className="stepper" aria-label="Progress">
-          {STAGES.map((s, i) => {
-            const state = i < run.splits.length ? "done" : i === run.stageIndex && !done ? "active" : "todo";
-            return (
-              <li key={s.id} className={`step ${state}`}>
-                <span className="step-dot">{state === "done" ? "✓" : i + 1}</span>
-                <span className="step-label">{s.title}</span>
-                {state === "done" && <span className="step-split">{formatDuration(run.splits[i] - (run.splits[i - 1] ?? 0))}</span>}
-              </li>
-            );
-          })}
-        </ol>
+        <div className="hud-left">{left ?? <Brand />}</div>
         <div className="hud-right">
-          {ghost && <Ghost ghost={ghost} elapsed={elapsed} label={ghostLabel} />}
+          {ghost && <Ghost ghost={ghost} elapsed={elapsed} />}
           <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
             <span className="timer-value" data-testid="timer">
               {formatDuration(elapsed)}
             </span>
             {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
           </div>
-          {headerExtra}
           {onGiveUp && !done && run.gaveUpAt === null && (
             <button className="btn-text" data-trace="hud:giveup" onClick={onGiveUp}>
               Give up
@@ -121,16 +106,6 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, gho
 
         {!done && (
           <div className={`appwin app-${stage.id}`} key={stage.id}>
-            <div className="appwin-bar">
-              <span className="appwin-dots">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="appwin-url">
-                {stage.app.toLowerCase()}.example/{stage.id === "shopping" ? "headphones" : stage.id === "calendar" ? "week" : "customers.csv"}
-              </span>
-            </div>
             {stage.id === "shopping" && (
               <Shopping ch={ch.shopping} state={run.states.shopping} dispatch={(a: ShopAction) => act("shopping", a)} onSubmit={submit} feedback={fb} />
             )}
@@ -146,24 +121,15 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, gho
   );
 }
 
-function Ghost({ ghost, elapsed, label }: { ghost: RunSummary; elapsed: number; label?: string }) {
+/** Where the recorded agent run was at this point in time. */
+function Ghost({ ghost, elapsed }: { ghost: RunSummary; elapsed: number }) {
   const cleared = ghost.splits.filter((s) => s <= elapsed).length;
-  const finishedBefore = ghost.finished && ghost.totalMs <= elapsed;
-  const stoppedBefore = !ghost.finished && ghost.totalMs <= elapsed;
   let text: string;
-  if (finishedBefore) text = `finished ${formatDuration(ghost.totalMs)}`;
-  else if (stoppedBefore) text = `stopped after ${ghost.stagesCleared}/3`;
+  if (ghost.totalMs <= elapsed) text = ghost.finished ? `done in ${formatDuration(ghost.totalMs)}` : `stopped after ${ghost.stagesCleared}/3`;
   else text = `on ${STAGES[Math.min(cleared, 2)].title}`;
   return (
-    <div className={`ghost ${finishedBefore ? "done" : ""}`} title="Where the recorded agent run was at this point in time">
-      <span className="ghost-label">{label ?? ghost.modelLabel}</span>
-      <span className="ghost-bar">
-        {[0, 1, 2].map((i) => (
-          <i key={i} className={i < cleared ? "on" : ""} />
-        ))}
-      </span>
-      <span className="ghost-text">{text}</span>
+    <div className="ghost" title="Where the recorded agent run was at this point in time">
+      Agent <b>{text}</b>
     </div>
   );
 }
-

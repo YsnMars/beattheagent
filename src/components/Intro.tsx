@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { STAGES, type Challenge } from "../challenge/types";
 import { formatSeconds } from "../lib/format";
 import { href } from "../lib/router";
@@ -8,62 +9,46 @@ type Props = {
   ch: Challenge;
   onStart?: () => void;
   ghost?: RunSummary | null;
+  /** Replaces the brand in the top bar (the replay puts its back link there). */
+  left?: ReactNode;
 };
 
-export const STAGE_ICONS = ["🎧", "📅", "📊"];
-
 export function Brand() {
-  return (
-    <span className="brand">
-      <span className="brand-mark">◆</span>
-      <span className="brand-name">Beat the Agent</span>
-    </span>
-  );
+  return <span className="brand">Beat the Agent</span>;
 }
 
-export function Intro({ ch, onStart, ghost }: Props) {
+export function Intro({ ch, onStart, ghost, left }: Props) {
   return (
     <div className="intro">
-      <header className="topbar">
-        <Brand />
-      </header>
+      <header className="topbar">{left ?? <Brand />}</header>
       <div className="intro-body">
-        {ghost?.finished ? (
-          <>
-            <p className="intro-eyebrow">{ghost.modelLabel} · browser use</p>
-            <h1 className="intro-title">
-              An AI agent did these three tasks in <span className="agent-ink">{formatSeconds(ghost.totalMs)}</span>.
-            </h1>
-            <p className="intro-sub">Try them yourself. You'll see where the agent was at each moment.</p>
-          </>
-        ) : (
-          <>
-            <h1 className="intro-title">Three everyday browser tasks.</h1>
-            <p className="intro-sub">Complete them in order. The timer starts when you press Start.</p>
-          </>
-        )}
+        <h1 className="intro-title">
+          {ghost?.finished ? (
+            <>
+              {ghost.modelLabel} did these three tasks in <span className="agent-ink">{formatSeconds(ghost.totalMs)}</span>.
+            </>
+          ) : (
+            "Three everyday browser tasks."
+          )}
+        </h1>
+        <p className="intro-sub">Do the same tasks, in order. Each one is checked when you submit it; wrong answers add {PENALTY_MS / 1000} seconds.</p>
         <ol className="intro-tasks">
-          {STAGES.map((s, i) => (
+          {STAGES.map((s) => (
             <li key={s.id}>
-              <span className="intro-task-icon" aria-hidden>
-                {STAGE_ICONS[i]}
-              </span>
-              <b>{s.title}</b>
-              <span>{s.blurb}</span>
+              <b>{s.title}</b> <span>{s.blurb}</span>
             </li>
           ))}
         </ol>
         <div className="intro-actions">
-          <button className="btn-primary btn-xl" data-trace="intro:start" onClick={onStart}>
+          <button className="btn-primary" data-trace="intro:start" onClick={onStart}>
             Start challenge
           </button>
           {ghost && (
             <a className="link" href={href(`/replay/${ch.seed}`)}>
-              or watch the agent first
+              Watch the agent first
             </a>
           )}
         </div>
-        <p className="intro-note">Each task is checked when you submit it. Wrong answers add {PENALTY_MS / 1000} seconds.</p>
       </div>
     </div>
   );
