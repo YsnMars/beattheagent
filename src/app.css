@@ -1621,13 +1621,47 @@ button:disabled {
   background: var(--surface-2);
   color: var(--text);
 }
-.prompt summary {
-  cursor: pointer;
+.prompt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
   color: var(--muted);
   font-size: 0.9rem;
 }
-.prompt summary:hover {
+.prompt-toggle:hover {
   color: var(--text);
+}
+.prompt-toggle svg {
+  transition: transform 0.25s ease;
+}
+.prompt.open .prompt-toggle svg {
+  transform: rotate(90deg);
+}
+/* Animating grid rows from 0fr to 1fr eases the height open without measuring it. */
+.prompt-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.25s ease;
+}
+.prompt.open .prompt-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.prompt-body > div {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-body,
+  .prompt-toggle svg {
+    transition: none;
+  }
 }
 .prompt pre {
   white-space: pre-wrap;

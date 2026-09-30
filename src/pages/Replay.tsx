@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateChallenge } from "../challenge/generate";
 import { STAGES, type StageId } from "../challenge/types";
 import { GameScreen } from "../components/GameScreen";
@@ -138,15 +138,14 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
                 Back
               </a>
             </div>
-            <details className="prompt">
-              <summary>What the agent was told</summary>
+            <Disclosure label="What the agent was told">
               <pre>{run.prompt.instructions}</pre>
               <pre>{run.prompt.task}</pre>
               <p className="muted small">
                 Everything else came from the page itself. The agent ran in an OpenAI-hosted browser; this replay is rebuilt from the page's log of its
                 clicks and inputs.
               </p>
-            </details>
+            </Disclosure>
           </div>
         </div>
       )}
@@ -185,6 +184,25 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** A collapsible section that eases open and closed (a native <details> snaps). */
+function Disclosure({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  return (
+    <div className={`prompt ${open ? "open" : ""}`}>
+      <button className="prompt-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" aria-hidden>
+          <path d="M5 2l7 6-7 6z" />
+        </svg>
+        {label}
+      </button>
+      <div className="prompt-body" id={id} inert={!open}>
+        <div>{children}</div>
       </div>
     </div>
   );
