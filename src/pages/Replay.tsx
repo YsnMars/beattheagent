@@ -207,7 +207,7 @@ function AgentCursor({ moves, cur, speed, step }: { moves: Move[]; cur: number; 
     };
     const inView = (el: HTMLElement) => {
       const r = el.getBoundingClientRect();
-      const top = document.querySelector(".replay-stage .hud, .replay-stage .topbar")?.getBoundingClientRect().bottom ?? 0;
+      const top = document.querySelector(".replay-stage .game-head, .replay-stage .topbar")?.getBoundingClientRect().bottom ?? 0;
       const bottom = (document.querySelector(".replay-bar")?.getBoundingClientRect().top ?? window.innerHeight) - 8;
       const box = el.parentElement?.closest("[data-scroll]")?.getBoundingClientRect();
       const left = Math.max(0, box?.left ?? 0);

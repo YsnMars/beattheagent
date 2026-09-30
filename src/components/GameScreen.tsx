@@ -68,25 +68,26 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, ove
 
   return (
     <div className="game">
-      <header className="hud">
-        <div className="hud-left">{left ?? <Brand />}</div>
-        <div className="hud-right">
-          {ghost && <Ghost ghost={ghost} elapsed={elapsed} />}
-          <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
-            <span className="timer-value" data-testid="timer">
-              {formatDuration(elapsed)}
-            </span>
-            {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
+      {/* The HUD and the task stay pinned together so the instructions are always in view. */}
+      <div className="game-head">
+        <header className="hud">
+          <div className="hud-left">{left ?? <Brand />}</div>
+          <div className="hud-right">
+            {ghost && <Ghost ghost={ghost} elapsed={elapsed} />}
+            <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
+              <span className="timer-value" data-testid="timer">
+                {formatDuration(elapsed)}
+              </span>
+              {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
+            </div>
+            {onGiveUp && !done && run.gaveUpAt === null && (
+              <button className="btn-text" data-trace="hud:giveup" onClick={onGiveUp}>
+                Give up
+              </button>
+            )}
           </div>
-          {onGiveUp && !done && run.gaveUpAt === null && (
-            <button className="btn-text" data-trace="hud:giveup" onClick={onGiveUp}>
-              Give up
-            </button>
-          )}
-        </div>
-      </header>
+        </header>
 
-      <main className="arena">
         {!done && (
           <section className="task" aria-live="polite">
             <div className="task-head">
@@ -103,7 +104,9 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, ove
             )}
           </section>
         )}
+      </div>
 
+      <main className="arena">
         {!done && (
           <div className={`appwin app-${stage.id}`} key={stage.id}>
             {stage.id === "shopping" && (
