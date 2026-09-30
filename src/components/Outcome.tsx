@@ -5,8 +5,8 @@ import { formatDuration } from "../lib/format";
 
 type Timed = Pick<RunResult, "finished" | "stagesCleared" | "splits" | "totalMs">;
 
-const stageTime = (splits: number[], i: number) => (i < splits.length ? splits[i] - (splits[i - 1] ?? 0) : null);
-const gap = (ms: number) => (ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : formatDuration(ms));
+export const stageTime = (splits: number[], i: number) => (i < splits.length ? splits[i] - (splits[i - 1] ?? 0) : null);
+export const gap = (ms: number) => (ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : formatDuration(ms));
 const shown = (r: Timed) => (r.finished ? formatDuration(r.totalMs) : `${r.stagesCleared}/3`);
 
 /** One plain sentence on how the two runs compare. */

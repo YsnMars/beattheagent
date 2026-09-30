@@ -385,15 +385,64 @@ button:disabled {
 }
 .intro-tasks {
   margin: 24px 0 0;
-  padding-left: 1.3em;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 8px;
+  grid-template-columns: 1.1em max-content 1fr auto;
+  column-gap: 10px;
+  row-gap: 8px;
 }
-.intro-tasks li::marker {
+/* Rows share the list's columns, so titles and descriptions line up. */
+.intro-tasks li {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-template-areas: "n title blurb time";
+  align-items: baseline;
+}
+.it-n {
+  grid-area: n;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.it-title {
+  grid-area: title;
+}
+.it-blurb {
+  grid-area: blurb;
   color: var(--muted);
 }
-.intro-tasks span {
+.it-time {
+  grid-area: time;
+  justify-self: end;
+  padding-left: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.intro-kbd {
+  margin-left: 10px;
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.55;
+}
+@media (hover: none) {
+  .intro-kbd {
+    display: none;
+  }
+}
+.intro-best {
+  margin: 18px 0 0;
   color: var(--muted);
+  font-size: 0.9rem;
+}
+.intro-best b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 .intro-actions {
   margin-top: 28px;
@@ -1551,6 +1600,19 @@ button:disabled {
 
 /* ------------------------------------------------------------------ responsive: site pages */
 @media (max-width: 600px) {
+  .intro-tasks {
+    grid-template-columns: 1fr;
+  }
+  .intro-tasks li {
+    column-gap: 8px;
+    grid-template-columns: 1.1em 1fr auto;
+    grid-template-areas:
+      "n title time"
+      ". blurb blurb";
+  }
+  .intro-best {
+    text-align: center;
+  }
   .intro-actions .btn-primary {
     width: 100%;
   }

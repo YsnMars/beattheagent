@@ -75,6 +75,22 @@ test("full run: three validated stages, one timer, then a fresh challenge", asyn
   expect(await page.getByTestId("timer").textContent()).not.toBe("0:00.0");
 });
 
+test("Enter starts the challenge, and a finished run becomes the personal best shown on the intro", async ({ page, isMobile }) => {
+  await page.goto(`#/play/${SEED}`);
+  await expect(page.getByTestId("best")).toHaveCount(0);
+  if (!isMobile) await expect(page.locator(".intro-kbd")).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  await solveShopping(page, SEED);
+  await solveCalendar(page, SEED);
+  await solveSheet(page, SEED);
+  const finalTime = await page.getByTestId("final-time").textContent();
+  // Come back to the same challenge fresh: the intro shows the best time.
+  await page.evaluate((seed) => sessionStorage.removeItem(`bta:run:v1:${seed}`), SEED);
+  await page.reload();
+  await expect(page.getByTestId("best")).toHaveText(`Your best on this challenge: ${finalTime}`);
+});
+
 test("reloading mid-run resumes the same timer and stage", async ({ page }) => {
   await page.goto(`#/play/${SEED}`);
   await page.getByRole("button", { name: "Start challenge" }).click();

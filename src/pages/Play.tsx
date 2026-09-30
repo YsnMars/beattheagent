@@ -4,6 +4,7 @@ import { GameScreen } from "../components/GameScreen";
 import { Intro } from "../components/Intro";
 import { Outcome } from "../components/Outcome";
 import { useAgentSummary } from "../game/agentRuns";
+import { recordBest } from "../game/bests";
 import { toResult } from "../game/run";
 import { useNow, useRun } from "../game/useRun";
 import { formatDuration } from "../lib/format";
@@ -29,6 +30,10 @@ export function Play({ seed, rec, onNext, autoStart }: Props) {
   useEffect(() => {
     document.title = "Beat the Agent";
   }, []);
+
+  useEffect(() => {
+    if (!rec && run.finishedAt !== null) recordBest(seed, toResult(run).totalMs);
+  }, [rec, seed, run]);
 
   // Before paint, so the intro never flashes. A resumed run keeps its original start time.
   useLayoutEffect(() => {

@@ -31,7 +31,7 @@ test("replay rebuilds the agent's run from its recorded log at the viewer's size
   const width = await page.locator(".replay-stage .game").evaluate((el) => el.getBoundingClientRect().width);
   expect(width).toBe(page.viewportSize()!.width);
   // The agent's current step is shown next to its cursor.
-  await expect(page.locator(".agent-step")).toBeVisible();
+  await expect(page.locator(".agent-step.pos-0")).toBeVisible();
   await page.screenshot({ path: `test-results/shots/${info.project.name}-replay-mid.png` });
   // Autoplays in real time; speed it up and let it reach the end.
   await page.getByRole("button", { name: "4×" }).click();
