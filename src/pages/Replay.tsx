@@ -11,11 +11,14 @@ import { href } from "../lib/router";
 
 /** Somewhere the agent's cursor goes: a recorded click, or an input it set without one. */
 type Move = { at: number; tgt: string; fx: number; fy: number };
-type Step = { at: number; text: string };
+/** A line in the agent's step stack: something it set out to do, or a submission verdict. */
+type Step = { at: number; text: string; kind: "act" | "ok" | "bad" };
 
 const SPEEDS = [1, 2, 4];
 const GLIDE_MS = 500; // cursor travel time before each click
 const SCROLL_LEAD_MS = 900; // bring the next target into view this long before the click
+const STEP_FINISH_MS = 350; // a finished step shows its check this long before it moves down
+const STEP_HOLD_MS = 700; // minimum time a new step stays on top before the next change
 
 export function Replay({ seed }: { seed: string }) {
   const run = useAgentRun(seed);
@@ -70,7 +73,9 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
   const derived = useMemo(() => deriveRun(ch, events, cur), [ch, events, cur]);
   const moves = useMemo(() => buildMoves(events), [events]);
   const steps = useMemo(() => buildSteps(run, startAt), [run, startAt]);
-  const step = steps.findLast((s) => s.at <= cur) ?? null;
+  // Newest first; the oldest of the four is on its way out.
+  const stepIdx = steps.findLastIndex((s) => s.at <= cur);
+  const recentSteps = useMemo(() => steps.slice(Math.max(0, stepIdx - 3), stepIdx + 1).reverse(), [steps, stepIdx]);
   const ended = derived.finishedAt !== null || derived.gaveUpAt !== null;
   const atEnd = cur >= tEnd;
   const restart = () => {
@@ -108,7 +113,7 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
         <>
           {/* Frames the screen while the agent is the one driving. */}
           <div className={`agent-vignette ${playing ? "" : "paused"}`} aria-hidden />
-          <AgentCursor moves={moves} cur={cur} speed={speed} step={step} />
+          <AgentCursor moves={moves} cur={cur} speed={speed} steps={recentSteps} playing={playing} />
         </>
       )}
 
@@ -191,10 +196,10 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
  * recorded against `data-trace` elements, so they're re-located in whatever layout the viewer
  * gets (desktop or mobile), and the page scrolls to each target just before the agent reaches it.
  */
-function AgentCursor({ moves, cur, speed, step }: { moves: Move[]; cur: number; speed: number; step: Step | null }) {
+function AgentCursor({ moves, cur, speed, steps, playing }: { moves: Move[]; cur: number; speed: number; steps: Step[]; playing: boolean }) {
   const cursor = useRef<HTMLDivElement>(null);
   const ripple = useRef<HTMLDivElement>(null);
-  const bubble = useRef<HTMLDivElement>(null);
+  const bubble = useRef<HTMLOListElement>(null);
   const props = useRef({ moves, cur, speed });
   props.current = { moves, cur, speed };
 
@@ -264,10 +269,14 @@ function AgentCursor({ moves, cur, speed, step }: { moves: Move[]; cur: number; 
       if (b) {
         // Beside the pointer, flipped to stay on screen and clear of the replay controls.
         const floor = (document.querySelector(".replay-bar")?.getBoundingClientRect().top ?? window.innerHeight) - 8;
+        // The fading-out step still takes up room; measure only the ones you can see.
+        const shown = b.querySelectorAll<HTMLElement>(".agent-step:not(.pos-3)");
+        const last = shown[shown.length - 1];
+        const h = last ? last.offsetTop + last.offsetHeight : 0;
         let x = pos.x + 16;
         let y = pos.y + 24;
         if (x + b.offsetWidth > window.innerWidth - 8) x = Math.max(8, pos.x - b.offsetWidth - 6);
-        if (y + b.offsetHeight > floor) y = pos.y - b.offsetHeight - 10;
+        if (y + h > floor) y = pos.y - h - 10;
         b.style.transform = `translate(${x}px, ${y}px)`;
       }
     };
@@ -283,12 +292,90 @@ function AgentCursor({ moves, cur, speed, step }: { moves: Move[]; cur: number; 
           <path d="M3 2l7 19 2.5-7.5L20 11z" fill="#1d1e21" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
         </svg>
       </div>
-      {step && (
-        <div className="agent-step" ref={bubble} key={step.at}>
-          {step.text}
-        </div>
-      )}
+      <StepStack steps={steps} playing={playing} ref={bubble} />
     </div>
+  );
+}
+
+/**
+ * What the agent is doing, next to its cursor. The newest step sits on top with a spinner. When the
+ * next one starts, the old one first flips to a check, then slides down and fades over a few steps.
+ * Changes are paced (steps that land close together are merged) so there's time to read each one.
+ */
+function StepStack({ steps, playing, ref }: { steps: Step[]; playing: boolean; ref: React.Ref<HTMLOListElement> }) {
+  const [shown, setShown] = useState(steps);
+  const [finishing, setFinishing] = useState(false);
+  const [ready, setReady] = useState(0);
+  const latest = useRef(steps);
+  latest.current = steps;
+  const busy = useRef(false);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  useEffect(() => {
+    if (busy.current) return;
+    const next = steps[0]?.at;
+    const current = shown[0]?.at;
+    if (next === current) return;
+    // Seeking backwards (or the first step): no animation, just catch up.
+    if (next === undefined || current === undefined || next < current) return setShown(steps);
+    busy.current = true;
+    const finish = shown[0].kind === "act" ? STEP_FINISH_MS : 0;
+    if (finish) setFinishing(true);
+    timers.current.push(
+      window.setTimeout(() => {
+        setFinishing(false);
+        setShown(latest.current);
+        timers.current.push(
+          window.setTimeout(() => {
+            busy.current = false;
+            setReady((n) => n + 1);
+          }, STEP_HOLD_MS),
+        );
+      }, finish),
+    );
+  }, [steps, shown, ready]);
+
+  // FLIP: steps that moved start where they were and glide down to their new slot.
+  const items = useRef(new Map<number, HTMLLIElement>());
+  const lastTops = useRef(new Map<number, number>());
+  useLayoutEffect(() => {
+    const tops = new Map<number, number>();
+    for (const [at, el] of items.current) tops.set(at, el.offsetTop);
+    for (const [at, el] of items.current) {
+      const before = lastTops.current.get(at);
+      const after = tops.get(at)!;
+      if (before === undefined || before === after) continue;
+      el.style.transition = "none";
+      el.style.transform = `translateY(${before - after}px)`;
+      el.getBoundingClientRect();
+      el.style.transition = "";
+      el.style.transform = "";
+    }
+    lastTops.current = tops;
+  }, [shown]);
+
+  return (
+    <ol className={`agent-steps ${playing ? "" : "paused"}`} ref={ref}>
+      {shown.map((s, i) => {
+        const state = s.kind !== "act" ? s.kind : i === 0 && !finishing ? "doing" : "done";
+        return (
+          <li
+            key={s.at}
+            className={`agent-step pos-${i}`}
+            ref={(el) => {
+              if (el) items.current.set(s.at, el);
+              else items.current.delete(s.at);
+            }}
+          >
+            <span className={`step-icon ${state}`} key={state}>
+              {state === "done" || state === "ok" ? "✓" : state === "bad" ? "✗" : null}
+            </span>
+            {s.text}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -328,7 +415,7 @@ function buildMoves(events: RunEvent[]): Move[] {
 function buildSteps(run: AgentRun, startAt: number): Step[] {
   const steps: Step[] = [];
   // Environment boot ("Connecting to the challenge" ×N) happens off the clock; keep only the lead-up to Start.
-  for (const a of run.activity) if (a.t > -2500 && a.title) steps.push({ at: startAt + a.t, text: a.title });
-  for (const e of run.events) if (e.k === "submit") steps.push({ at: e.at, text: e.ok ? `✓ ${e.msg}` : `✗ ${e.msg}` });
+  for (const a of run.activity) if (a.t > -2500 && a.title) steps.push({ at: startAt + a.t, text: a.title, kind: "act" });
+  for (const e of run.events) if (e.k === "submit") steps.push({ at: e.at, text: e.msg, kind: e.ok ? "ok" : "bad" });
   return steps.sort((a, b) => a.at - b.at).filter((s, i, all) => s.text !== all[i - 1]?.text);
 }
