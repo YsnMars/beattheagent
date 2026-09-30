@@ -91,6 +91,41 @@ test("Enter starts the challenge, and a finished run becomes the personal best s
   await expect(page.getByTestId("best")).toHaveText(`Your best on this challenge: ${finalTime}`);
 });
 
+test("the header leads back to the start page, asking first while a run is going", async ({ page }) => {
+  await page.goto("#/");
+  await page.getByRole("button", { name: "Start challenge" }).click();
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  const home = page.locator('[data-trace="hud:home"]');
+  await expect(home).toBeVisible();
+  // "Stay" keeps the run going.
+  await home.click();
+  const ask = page.getByRole("dialog", { name: "Leave this run?" });
+  await expect(ask.getByRole("button", { name: "Stay" })).toBeFocused();
+  await ask.getByRole("button", { name: "Stay" }).click();
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  // "Leave" goes back to the landing page, with the clock not running.
+  await home.click();
+  await ask.getByRole("button", { name: "Leave" }).click();
+  await expect(page.getByRole("button", { name: "Start challenge" })).toBeVisible();
+  await expect(page.getByTestId("timer")).toHaveCount(0);
+  // And a reload stays there instead of resuming the abandoned run.
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Start challenge" })).toBeVisible();
+});
+
+test("the results card has a way back to the start page", async ({ page }) => {
+  await page.goto(`#/play/${SEED}`);
+  await page.getByRole("button", { name: "Start challenge" }).click();
+  page.on("dialog", () => {
+    throw new Error("unexpected native dialog");
+  });
+  await page.locator('[data-trace="hud:giveup"]').click();
+  await page.getByRole("dialog", { name: "Give up this run?" }).getByRole("button", { name: "Give up" }).click();
+  await page.getByTestId("home").click();
+  await expect(page.getByRole("button", { name: "Start challenge" })).toBeVisible();
+  expect(await page.evaluate(() => location.hash)).toBe("#/");
+});
+
 test("reloading mid-run resumes the same timer and stage", async ({ page }) => {
   await page.goto(`#/play/${SEED}`);
   await page.getByRole("button", { name: "Start challenge" }).click();

@@ -13,13 +13,13 @@ export function App() {
 
   // Direct links to a seed: used by the agent recorder (with `rec`) and for testing specific challenges.
   if (page === "play" && isValidSeed(seed)) {
-    const next = () => {
+    const leave = (autoStart: boolean) => {
       clearRun(seed);
       clearCurrentSeed();
-      requestAutoStart();
+      if (autoStart) requestAutoStart();
       navigate("/");
     };
-    return <Play key={seed + (query.get("rec") ?? "")} seed={seed} rec={query.get("rec")} onNext={next} />;
+    return <Play key={seed + (query.get("rec") ?? "")} seed={seed} rec={query.get("rec")} onNext={() => leave(true)} onHome={() => leave(false)} />;
   }
   if (page === "replay" && isValidSeed(seed)) return <Replay key={seed} seed={seed} />;
   return <Home />;

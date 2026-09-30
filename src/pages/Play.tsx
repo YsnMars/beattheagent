@@ -15,11 +15,13 @@ type Props = {
   rec: string | null;
   /** Deals a fresh challenge that starts right away. */
   onNext: () => void;
+  /** Back to the landing page with a fresh challenge. */
+  onHome: () => void;
   /** Skip the intro: start the clock as soon as the challenge is dealt. */
   autoStart?: boolean;
 };
 
-export function Play({ seed, rec, onNext, autoStart }: Props) {
+export function Play({ seed, rec, onNext, onHome, autoStart }: Props) {
   const ch = useMemo(() => generateChallenge(seed), [seed]);
   const { run, start, act, submit, giveUp } = useRun(ch, rec);
   const agent = useAgentSummary(seed);
@@ -80,6 +82,11 @@ export function Play({ seed, rec, onNext, autoStart }: Props) {
             </button>
           </div>
         )}
+        {!rec && (
+          <button className="btn-text finish-home" onClick={onHome} data-testid="home">
+            Back to start
+          </button>
+        )}
       </div>
     </div>
   ) : null;
@@ -92,6 +99,7 @@ export function Play({ seed, rec, onNext, autoStart }: Props) {
       onAct={act}
       onSubmit={submit}
       onGiveUp={giveUp}
+      onHome={rec ? undefined : onHome}
       ghost={ghost}
       overlay={overlay}
     />

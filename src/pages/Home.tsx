@@ -28,6 +28,14 @@ export function Home() {
         clearCurrentSeed();
         setGo(true);
         setSeed(null);
+        window.scrollTo(0, 0);
+      }}
+      onHome={() => {
+        clearRun(seed);
+        clearCurrentSeed();
+        setGo(false);
+        setSeed(null);
+        window.scrollTo(0, 0);
       }}
     />
   );
