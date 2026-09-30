@@ -1334,12 +1334,9 @@ button:disabled {
   animation: step-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s backwards;
 }
 .agent-step.pos-1 {
-  opacity: 0.72;
+  opacity: 0.6;
 }
 .agent-step.pos-2 {
-  opacity: 0.4;
-}
-.agent-step.pos-3 {
   opacity: 0;
 }
 @keyframes step-in {
