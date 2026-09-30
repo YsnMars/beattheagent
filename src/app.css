@@ -9,9 +9,36 @@
   --accent: #3d5f94; /* the agent */
   --ok: #2f7a45;
   --bad: #b8403a;
+  --bad-bg: #fbeceb;
+  --primary-hover: #000;
+  --scrim: rgba(29, 30, 33, 0.25);
+  --glow: 62, 112, 214; /* agent vignette, as r, g, b */
+  --step-bg: #1d1e21;
+  --step-line: transparent;
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   color-scheme: light;
+}
+/* Dark theme follows the system setting. The challenge apps keep their own light look. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18191c;
+    --surface: #222327;
+    --surface-2: #2c2d32;
+    --line: #35373d;
+    --text: #ececee;
+    --muted: #9b9ea6;
+    --accent: #93b2e6;
+    --ok: #7fc794;
+    --bad: #ee8c86;
+    --bad-bg: rgba(238, 140, 134, 0.12);
+    --primary-hover: #fff;
+    --scrim: rgba(0, 0, 0, 0.55);
+    --glow: 96, 145, 235;
+    --step-bg: #2a2b30;
+    --step-line: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
+  }
 }
 * {
   box-sizing: border-box;
@@ -71,7 +98,7 @@ button:disabled {
   color: var(--bg);
 }
 .btn-primary:hover {
-  background: #000;
+  background: var(--primary-hover);
 }
 .btn-ghost {
   background: transparent;
@@ -250,7 +277,7 @@ button:disabled {
 .task-feedback {
   margin-top: 10px;
   border-left: 3px solid var(--bad);
-  background: #fbeceb;
+  background: var(--bad-bg);
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.92rem;
@@ -345,7 +372,7 @@ button:disabled {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(29, 30, 33, 0.25);
+  background: var(--scrim);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -1270,10 +1297,10 @@ button:disabled {
   z-index: 61; /* over the controls too, so it frames the whole screen */
   pointer-events: none;
   box-shadow:
-    inset 0 0 0 3px rgba(62, 112, 214, 0.85),
-    inset 0 0 24px 6px rgba(62, 112, 214, 0.55),
-    inset 0 0 90px 20px rgba(62, 112, 214, 0.32),
-    inset 0 0 220px 50px rgba(62, 112, 214, 0.16);
+    inset 0 0 0 3px rgba(var(--glow), 0.85),
+    inset 0 0 24px 6px rgba(var(--glow), 0.55),
+    inset 0 0 90px 20px rgba(var(--glow), 0.32),
+    inset 0 0 220px 50px rgba(var(--glow), 0.16);
   animation:
     fade 0.4s both,
     breathe 2.6s ease-in-out 0.4s infinite alternate;
@@ -1319,7 +1346,8 @@ button:disabled {
   align-items: center;
   gap: 7px;
   max-width: min(280px, calc(100vw - 16px));
-  background: #1d1e21;
+  background: var(--step-bg);
+  border: 1px solid var(--step-line);
   color: #f1f1f2;
   font-size: 0.82rem;
   line-height: 1.3;
@@ -1329,12 +1357,14 @@ button:disabled {
   transform-origin: left center;
   transition:
     transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 0.45s ease;
+    opacity 0.45s ease,
+    color 0.45s ease;
   /* Enters just after the older steps start moving down to make room. */
   animation: step-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s backwards;
 }
+/* The finished step dims its text but keeps an opaque pill, so busy content never shows through. */
 .agent-step.pos-1 {
-  opacity: 0.6;
+  color: #9fa2aa;
 }
 .agent-step.pos-2 {
   opacity: 0;
