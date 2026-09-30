@@ -1,4 +1,4 @@
-import { clearCurrentSeed } from "./game/agentRuns";
+import { clearCurrentSeed, requestAutoStart } from "./game/agentRuns";
 import { clearRun } from "./game/useRun";
 import { isValidSeed } from "./lib/rng";
 import { navigate, useRoute } from "./lib/router";
@@ -16,6 +16,7 @@ export function App() {
     const next = () => {
       clearRun(seed);
       clearCurrentSeed();
+      requestAutoStart();
       navigate("/");
     };
     return <Play key={seed + (query.get("rec") ?? "")} seed={seed} rec={query.get("rec")} onNext={next} />;

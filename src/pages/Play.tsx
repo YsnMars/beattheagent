@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import { generateChallenge } from "../challenge/generate";
 import { GameScreen } from "../components/GameScreen";
 import { Intro } from "../components/Intro";
@@ -12,11 +12,13 @@ import { href } from "../lib/router";
 type Props = {
   seed: string;
   rec: string | null;
-  /** Deals a fresh challenge. */
+  /** Deals a fresh challenge that starts right away. */
   onNext: () => void;
+  /** Skip the intro: start the clock as soon as the challenge is dealt. */
+  autoStart?: boolean;
 };
 
-export function Play({ seed, rec, onNext }: Props) {
+export function Play({ seed, rec, onNext, autoStart }: Props) {
   const ch = useMemo(() => generateChallenge(seed), [seed]);
   const { run, start, act, submit, giveUp } = useRun(ch, rec);
   const agent = useAgentSummary(seed);
@@ -27,6 +29,11 @@ export function Play({ seed, rec, onNext }: Props) {
   useEffect(() => {
     document.title = "Beat the Agent";
   }, []);
+
+  // Before paint, so the intro never flashes. A resumed run keeps its original start time.
+  useLayoutEffect(() => {
+    if (autoStart) start();
+  }, [autoStart, start]);
 
   if (run.startedAt === null) {
     return (
@@ -64,7 +71,7 @@ export function Play({ seed, rec, onNext }: Props) {
               </a>
             )}
             <button className={ghost ? "btn-ghost" : "btn-primary"} onClick={onNext} data-testid="next">
-              Try another
+              Try again
             </button>
           </div>
         )}
@@ -79,9 +86,7 @@ export function Play({ seed, rec, onNext }: Props) {
       now={now}
       onAct={act}
       onSubmit={submit}
-      onGiveUp={() => {
-        if (window.confirm("Give up? You'll see how the agent compares.")) giveUp();
-      }}
+      onGiveUp={giveUp}
       ghost={ghost}
       overlay={overlay}
     />

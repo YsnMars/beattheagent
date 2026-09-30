@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { STAGES, type Challenge, type StageId } from "../challenge/types";
 import { colList, sortLabel } from "../challenge/validate";
 import { formatDay, formatDuration, formatMoney } from "../lib/format";
@@ -80,11 +80,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, ove
               </span>
               {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
             </div>
-            {onGiveUp && !done && run.gaveUpAt === null && (
-              <button className="btn-text" data-trace="hud:giveup" onClick={onGiveUp}>
-                Give up
-              </button>
-            )}
+            {onGiveUp && !done && run.gaveUpAt === null && <GiveUp onConfirm={onGiveUp} hasAgent={!!ghost} />}
           </div>
         </header>
 
@@ -121,6 +117,52 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, ove
         {overlay}
       </main>
     </div>
+  );
+}
+
+/** "Give up" with a small confirmation popover. The clock keeps running while it's open. */
+function GiveUp({ onConfirm, hasAgent }: { onConfirm: () => void; hasAgent: boolean }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  const stay = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    stay.current?.focus();
+    const onPointer = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <span className="giveup" ref={root}>
+      <button className="btn-text" data-trace="hud:giveup" aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(!open)}>
+        Give up
+      </button>
+      {open && (
+        <div className="giveup-pop" role="dialog" aria-label="Give up this run?">
+          <b>Give up this run?</b>
+          <p>{hasAgent ? "You'll see how far you got next to the agent." : "You'll see how far you got."}</p>
+          <div className="giveup-actions">
+            <button className="btn-ghost" ref={stay} data-trace="hud:giveup-cancel" onClick={() => setOpen(false)}>
+              Keep going
+            </button>
+            <button className="btn-primary" data-trace="hud:giveup-confirm" onClick={onConfirm}>
+              Give up
+            </button>
+          </div>
+        </div>
+      )}
+    </span>
   );
 }
 

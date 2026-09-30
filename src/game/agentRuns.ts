@@ -89,6 +89,17 @@ export function clearCurrentSeed() {
   sessionStorage.removeItem(CURRENT);
 }
 
+// One-shot "start the next dealt challenge immediately" request, for "Try again" on a direct link.
+let autoStartNext = false;
+export function requestAutoStart() {
+  autoStartNext = true;
+}
+export function takeAutoStart(): boolean {
+  const go = autoStartNext;
+  autoStartNext = false;
+  return go;
+}
+
 /**
  * Picks the next challenge for this tab: the featured seed on a first visit if set, otherwise a
  * recorded seed this browser hasn't been dealt yet, so repeat visits rotate through the pool.
