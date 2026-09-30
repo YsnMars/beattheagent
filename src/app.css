@@ -384,6 +384,7 @@ button:disabled {
 /* ------------------------------------------------------------------ intro */
 .intro {
   min-height: 100vh;
+  min-height: 100dvh; /* the visible height, excluding mobile browser toolbars */
   display: flex;
   flex-direction: column;
 }
@@ -395,7 +396,8 @@ button:disabled {
   padding: 24px 20px 10vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Centered (a little above the middle, via the bottom padding); top-aligned only if it doesn't fit. */
+  justify-content: safe center;
 }
 .intro-brand {
   margin: 0 0 20px;
@@ -1675,11 +1677,9 @@ button:disabled {
 
 /* ------------------------------------------------------------------ responsive: site pages */
 @media (max-width: 600px) {
-  /* Top-aligned on phones so the Start button stays within reach. */
   .intro-body {
-    justify-content: flex-start;
-    padding-top: 40px;
-    padding-bottom: 32px;
+    padding-top: 32px;
+    padding-bottom: calc(32px + 6vh);
   }
   .intro-tasks {
     grid-template-columns: 1fr;
