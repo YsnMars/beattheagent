@@ -6,13 +6,13 @@
   --line: #dddde2;
   --text: #1d1e21;
   --muted: #6b6e76;
-  --accent: #3d5f94; /* the agent */
+  --accent: #5b4bb7; /* the agent: violet, a hue none of the challenge apps use */
   --ok: #2f7a45;
   --bad: #b8403a;
   --bad-bg: #fbeceb;
   --primary-hover: #000;
   --scrim: rgba(29, 30, 33, 0.25);
-  --glow: 62, 112, 214; /* agent vignette, as r, g, b */
+  --glow: 108, 88, 214; /* agent vignette, as r, g, b */
   --step-bg: #1d1e21;
   --step-line: transparent;
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -22,20 +22,20 @@
 /* Dark theme follows the system setting. The challenge apps keep their own light look. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #18191c;
-    --surface: #222327;
-    --surface-2: #2c2d32;
-    --line: #35373d;
+    --bg: #1c1d21;
+    --surface: #25262b;
+    --surface-2: #2f3036;
+    --line: #393b42;
     --text: #ececee;
     --muted: #9b9ea6;
-    --accent: #93b2e6;
+    --accent: #ada2f2;
     --ok: #7fc794;
     --bad: #ee8c86;
     --bad-bg: rgba(238, 140, 134, 0.12);
     --primary-hover: #fff;
     --scrim: rgba(0, 0, 0, 0.55);
-    --glow: 96, 145, 235;
-    --step-bg: #2a2b30;
+    --glow: 150, 130, 245;
+    --step-bg: #2d2e34;
     --step-line: rgba(255, 255, 255, 0.1);
     color-scheme: dark;
   }
