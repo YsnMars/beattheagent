@@ -1,0 +1,56 @@
+{
+  "featured": null,
+  "runs": [
+    {
+      "seed": "K7M2Q",
+      "model": "gpt-6.1-sol",
+      "modelLabel": "GPT-6.1 Sol",
+      "recordedAt": "2026-09-30T10:01:45.920Z",
+      "finished": true,
+      "stagesCleared": 3,
+      "splits": [
+        7582,
+        15061,
+        29009
+      ],
+      "totalMs": 29009,
+      "penalties": 0,
+      "costUsd": 0.209,
+      "costBasis": "reported-usage"
+    },
+    {
+      "seed": "P4XW9",
+      "model": "gpt-6.1-sol",
+      "modelLabel": "GPT-6.1 Sol",
+      "recordedAt": "2026-09-30T10:05:12.433Z",
+      "finished": true,
+      "stagesCleared": 3,
+      "splits": [
+        6562,
+        10895,
+        22668
+      ],
+      "totalMs": 22668,
+      "penalties": 0,
+      "costUsd": 0.1795,
+      "costBasis": "reported-usage"
+    },
+    {
+      "seed": "H8RT3",
+      "model": "gpt-6.1-sol",
+      "modelLabel": "GPT-6.1 Sol",
+      "recordedAt": "2026-09-30T10:06:48.495Z",
+      "finished": true,
+      "stagesCleared": 3,
+      "splits": [
+        6627,
+        10913,
+        24945
+      ],
+      "totalMs": 24945,
+      "penalties": 0,
+      "costUsd": 0.165,
+      "costBasis": "reported-usage"
+    }
+  ]
+}
