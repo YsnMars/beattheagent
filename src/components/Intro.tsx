@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { STAGES, type Challenge } from "../challenge/types";
-import { formatDuration, formatSeconds } from "../lib/format";
+import { formatSeconds } from "../lib/format";
 import { href } from "../lib/router";
 import { PENALTY_MS } from "../game/run";
 import type { RunSummary } from "../game/agentRuns";
@@ -15,8 +15,22 @@ type Props = {
   left?: ReactNode;
 };
 
+/** The logo: the agent's cursor, as drawn in replays. */
+export function Mark() {
+  return (
+    <svg className="mark" viewBox="0 0 24 24" width="14" height="14" aria-hidden>
+      <path d="M4 2.5l6.6 17.8 2.3-7.1 7.1-2.3z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Brand() {
-  return <span className="brand">Beat the Agent</span>;
+  return (
+    <span className="brand">
+      <Mark />
+      Beat the Agent
+    </span>
+  );
 }
 
 export function Intro({ ch, onStart, ghost, left }: Props) {
@@ -38,18 +52,25 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
 
   return (
     <div className="intro">
-      <header className="topbar">{left ?? <Brand />}</header>
+      {/* The replay shows its own back link up top; the landing page keeps the name with the content. */}
+      {left && <header className="topbar">{left}</header>}
       <div className="intro-body">
+        {!left && (
+          <p className="intro-brand">
+            <Brand />
+          </p>
+        )}
         <h1 className="intro-title">
           {ghost?.finished ? (
             <>
-              {ghost.modelLabel} did these three tasks in <span className="agent-ink">{formatSeconds(ghost.totalMs)}</span>.
+              An AI agent did these three tasks in <span className="agent-ink">{formatSeconds(ghost.totalMs)}</span>.
             </>
           ) : (
             "Three everyday browser tasks."
           )}
+          <span className="intro-dare">{ghost?.finished ? "Can you do them faster?" : "How fast can you do them?"}</span>
         </h1>
-        <p className="intro-sub">Do the same tasks, in order. Each one is checked when you submit it; wrong answers add {PENALTY_MS / 1000} seconds.</p>
+        <p className="intro-sub">Same tasks, same page, one clock. Wrong answers cost {PENALTY_MS / 1000} seconds.</p>
         <ol className="intro-tasks">
           {STAGES.map((s, i) => {
             const t = ghost ? stageTime(ghost.splits, i) : null;
@@ -69,18 +90,22 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
         </ol>
         <div className="intro-actions">
           <button className="btn-primary" data-trace="intro:start" onClick={onStart}>
-            Start challenge
-            {onStart && <kbd className="intro-kbd">Enter</kbd>}
+            Start
+            {onStart && (
+              <kbd className="intro-kbd" aria-hidden>
+                Enter
+              </kbd>
+            )}
           </button>
           {ghost && (
             <a className="link" href={href(`/replay/${ch.seed}`)}>
-              Watch the agent first
+              Watch {ghost.modelLabel} do it
             </a>
           )}
         </div>
         {best && (
           <p className="intro-best" data-testid="best">
-            {best.here ? "Your best on this challenge" : "Your best so far"}: <b>{formatDuration(best.ms)}</b>
+            {best.here ? "Your best on this challenge" : "Your best so far"}: <b>{gap(best.ms)}</b>
           </p>
         )}
       </div>

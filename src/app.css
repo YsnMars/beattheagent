@@ -156,8 +156,14 @@ button:disabled {
   padding: 14px 20px;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 700;
   white-space: nowrap;
+}
+.mark {
+  flex: none;
 }
 .home-btn {
   display: inline-flex;
@@ -386,10 +392,14 @@ button:disabled {
   width: 100%;
   max-width: 620px;
   margin: 0 auto;
-  padding: 24px 20px 14vh;
+  padding: 24px 20px 10vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+.intro-brand {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
 }
 .intro-title {
   margin: 0;
@@ -397,6 +407,10 @@ button:disabled {
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
+}
+.intro-dare {
+  display: block;
+  color: var(--muted);
 }
 .agent-ink {
   color: var(--accent);
@@ -1627,6 +1641,12 @@ button:disabled {
 
 /* ------------------------------------------------------------------ responsive: site pages */
 @media (max-width: 600px) {
+  /* Top-aligned on phones so the Start button stays within reach. */
+  .intro-body {
+    justify-content: flex-start;
+    padding-top: 40px;
+    padding-bottom: 32px;
+  }
   .intro-tasks {
     grid-template-columns: 1fr;
   }

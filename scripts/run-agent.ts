@@ -94,7 +94,7 @@ The store, calendar, and spreadsheet on the page are simulated test apps. You ar
 The user is not watching, so do not stop to ask questions or for confirmation. Stay on the given page.`;
 
 const taskFor = (url: string) =>
-  `Open ${url} in the browser. Press "Start challenge" and complete all three stages by following the on-page instructions. The run is over when the page shows "Challenge complete". Then reply with the final time shown on the page.`;
+  `Open ${url} in the browser. Press "Start" and complete all three stages by following the on-page instructions. The run is over when the page shows "Challenge complete". Then reply with the final time shown on the page.`;
 
 // ------------------------------------------------------------------ one run
 

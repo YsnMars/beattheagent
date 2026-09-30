@@ -11,7 +11,7 @@ test.skip(!run, "no recorded agent runs");
 test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", async ({ page }) => {
   await page.goto(`#/play/${run.seed}`);
   await expect(page.locator(".intro")).toContainText(run.modelLabel);
-  await page.getByRole("button", { name: "Start challenge" }).click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(page.locator(".ghost")).toBeVisible();
   await solveShopping(page, run.seed);
   await solveCalendar(page, run.seed);
