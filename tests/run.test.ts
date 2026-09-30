@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateChallenge } from "../src/challenge/generate";
 import { solveChallenge } from "../src/challenge/solve";
-import { compareResults, decodeResult, deriveRun, encodeResult, judge, PENALTY_MS, toResult, type RunEvent } from "../src/game/run";
+import { deriveRun, judge, PENALTY_MS, toResult, type RunEvent } from "../src/game/run";
 import { applyAction, initialStates } from "../src/game/state";
 import type { StageId } from "../src/challenge/types";
 
@@ -62,19 +62,11 @@ describe("run log", () => {
     expect(deriveRun(ch, early).splits).toHaveLength(0);
   });
 
-  it("round-trips a scorecard payload", () => {
-    const r = toResult(seed, deriveRun(ch, play()), "Robin 🎧");
-    const back = decodeResult(encodeResult(r))!;
-    expect(back).toEqual(r);
-    expect(decodeResult("garbage")).toBeNull();
-  });
-
-  it("compares finished runs by time and unfinished runs by stages cleared", () => {
-    const fin = (ms: number) => ({ finished: true, stagesCleared: 3, splits: [1, 2, ms], totalMs: ms });
-    expect(compareResults(fin(100), fin(200))).toBeLessThan(0);
-    const partial = { finished: false, stagesCleared: 2, splits: [10, 20], totalMs: 999 };
-    expect(compareResults(fin(5000), partial)).toBeLessThan(0);
-    const partialFaster = { finished: false, stagesCleared: 2, splits: [5, 15], totalMs: 50 };
-    expect(compareResults(partialFaster, partial)).toBeLessThan(0);
+  it("summarizes a run into a result", () => {
+    const r = toResult(deriveRun(ch, play()));
+    expect(r.finished).toBe(true);
+    expect(r.stagesCleared).toBe(3);
+    expect(r.penalties).toBe(1);
+    expect(r.totalMs).toBe(r.splits[2]);
   });
 });

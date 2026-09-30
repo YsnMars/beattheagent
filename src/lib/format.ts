@@ -56,10 +56,9 @@ export function formatDuration(ms: number, decimals = 1): string {
 }
 
 /** Signed difference, e.g. "+12.3s" / "−4.0s" / "+1:02.5" */
-export function formatDelta(ms: number): string {
-  const sign = ms < 0 ? "−" : "+";
-  const abs = Math.abs(ms);
-  return abs < 60_000 ? `${sign}${(abs / 1000).toFixed(1)}s` : `${sign}${formatDuration(abs)}`;
+/** "22.7 seconds" for short times, "1:04.2" otherwise. */
+export function formatSeconds(ms: number): string {
+  return ms < 60_000 ? `${(ms / 1000).toFixed(1)} seconds` : formatDuration(ms);
 }
 
 export function formatUsd(amount: number): string {

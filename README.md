@@ -1,12 +1,12 @@
 # Beat the Agent
 
-A browser game where humans race an AI agent through **one continuous, three-stage challenge**:
+A small showcase of how effective an AI agent is at browser use. An agent did three everyday browser tasks on one clock; you try the same tasks and see how you compare:
 
 1. **Shopping (SoundMarket):** buy the one pair of headphones that meets a budget, a minimum rating, and a delivery deadline.
 2. **Calendar (Cadence):** reschedule a meeting so it fits every attendee's free time, their working hours, and the meeting's length.
 3. **Spreadsheet (Gridly):** remove duplicates by the specified columns, keep the most recently updated row from each group, and sort what's left.
 
-One timer runs across all three stages. Each stage is validated on submit, and you advance only when it passes. A rejected submission adds 15 s. Finished runs are compared on total time and per-stage splits. If a run is unfinished (you gave up, or the agent stalled), the one with more stages cleared wins.
+One timer runs across all three stages. Each stage is validated on submit, and you advance only when it passes. A rejected submission adds 15 s. At the end you see your time next to the agent's, stage by stage, and can watch a replay of exactly how the agent did it.
 
 The opponent is **GPT-6.1 Sol** (`gpt-6.1-sol`) running on OpenAI's **Agents API with hosted-browser computer use**. It played the exact same seeded page in a real hosted browser. The page recorded its genuine clicks, inputs, submissions, and timings, and the API recorded its browser activity, screenshots, and token usage. Runs are **precomputed**, so public play is a static site that never calls the API.
 
@@ -17,15 +17,15 @@ npm install
 npm run dev            # http://localhost:5173
 ```
 
-The repo includes recorded agent runs in `public/runs/`. Without any runs you can still play practice seeds, just without an opponent.
+The repo includes recorded agent runs in `public/runs/`. Without any runs, `#/` deals random unrecorded seeds and plays without an agent to compare against.
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Vite dev server |
 | `npm run build` | Typecheck + production build to `dist/` (static; deploy anywhere) |
 | `npm run serve` | Serve `dist/` at http://127.0.0.1:4173 |
-| `npm test` | Unit tests: generator invariants on 300 seeds, validators, run-log replay, scoring, scorecard encoding |
-| `npm run e2e` | Playwright: full human run on desktop and mobile viewports (penalty, validation, results, share link → identical challenge, reload-resume, give-up) |
+| `npm test` | Unit tests: generator invariants on 300 seeds, validators, run-log replay, results |
+| `npm run e2e` | Playwright: full human run on desktop and mobile viewports (dealing a challenge, penalty, validation, you-vs-agent summary, replay, reload-resume, give-up) |
 | `npm run agent:run -- --seeds K7M2Q` | Record a genuine agent run (costs API money; see below) |
 
 ## Recording agent runs
@@ -86,7 +86,8 @@ Observed behavior: the hosted browser acts on page elements directly. Every reco
   - **reload-resume** for humans (no resetting the clock by refreshing), and
   - **exact replays** of the agent: `#/replay/<seed>` re-renders the real game UI at the agent's viewport size (layout uses container queries, so it matches on any screen), moves a ghost cursor to each recorded click target, and shows the hosted-browser screenshots and API activity in sync.
 - **Ghost race:** during play, the HUD shows where the recorded agent was at the same elapsed time.
-- **Sharing:** results encode into the URL (`#/c/<payload>`), so no backend is needed. The scorecard page links friends to the identical challenge. There's also a downloadable 1200×630 PNG and Web Share support. Payloads aren't signed; it's a friendly game.
+- **Seeds stay behind the scenes:** `#/` deals a recorded seed at random, preferring ones this browser hasn't seen, and keeps it for the tab so a reload resumes the run. The seed isn't shown anywhere. `#/play/<seed>` still opens a specific challenge; the recorder and tests use it.
+- **After a run:** you see your time next to the agent's, a one-line comparison, per-stage bars, and links to watch the agent's replay or try another challenge.
 - **Mobile:** every stage adapts to phones (filter chips, single-day calendar with day tabs, horizontally scrolling sheet). The e2e suite runs the full flow on a Pixel 7 viewport.
 
 ## Deploying
@@ -99,7 +100,7 @@ Observed behavior: the hosted browser acts on page elements directly. Every reco
 src/challenge/   seeded generators, validators, reference solver
 src/game/        run log + derivation, reducers, recorder hook, agent-run loaders
 src/stages/      Shopping, Calendar, Sheet apps
-src/pages/       Landing, Play, Results, Card (shared scorecard), Replay
+src/pages/       Home (deals a challenge), Play, Replay
 scripts/         run-agent.ts (recorder), server.ts (static + trace collector)
 tests/           vitest unit tests
 e2e/             Playwright end-to-end tests

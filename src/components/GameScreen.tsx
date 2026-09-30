@@ -5,6 +5,7 @@ import { formatDay, formatDuration, formatMoney } from "../lib/format";
 import { elapsedAt, PENALTY_MS, type DerivedRun } from "../game/run";
 import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/state";
 import type { RunSummary } from "../game/agentRuns";
+import { Brand } from "./Intro";
 import { Shopping } from "../stages/Shopping";
 import { Calendar, clashFor } from "../stages/Calendar";
 import { Sheet } from "../stages/Sheet";
@@ -69,11 +70,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, gho
     <div className="game">
       <header className="hud">
         <div className="hud-left">
-          <a className="hud-logo" href="#/" aria-label="Beat the Agent home">
-            <span className="logo-mark">◆</span>
-            <span className="hud-logo-text">Beat the Agent</span>
-          </a>
-          <span className="hud-seed">#{ch.seed}</span>
+          <Brand />
         </div>
         <ol className="stepper" aria-label="Progress">
           {STAGES.map((s, i) => {
@@ -90,15 +87,14 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, ghost, gho
         <div className="hud-right">
           {ghost && <Ghost ghost={ghost} elapsed={elapsed} label={ghostLabel} />}
           <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
-            <span className="timer-label">Time</span>
             <span className="timer-value" data-testid="timer">
               {formatDuration(elapsed)}
             </span>
-            {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s pen.</span>}
+            {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
           </div>
           {headerExtra}
           {onGiveUp && !done && run.gaveUpAt === null && (
-            <button className="btn-ghost small" data-trace="hud:giveup" onClick={onGiveUp}>
+            <button className="btn-text" data-trace="hud:giveup" onClick={onGiveUp}>
               Give up
             </button>
           )}

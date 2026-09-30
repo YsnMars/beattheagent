@@ -6,6 +6,11 @@ import type { AnyAction } from "./state";
 
 const storageKey = (seed: string, rec: string | null) => `bta:run:v1:${seed}${rec ? ":rec" : ""}`;
 
+/** Forgets a human run so the seed starts fresh the next time it's dealt. */
+export function clearRun(seed: string) {
+  sessionStorage.removeItem(storageKey(seed, null));
+}
+
 function loadEvents(key: string): RunEvent[] | null {
   try {
     const raw = sessionStorage.getItem(key);
@@ -122,14 +127,7 @@ export function useRun(ch: Challenge, rec: string | null) {
 
   const giveUp = useCallback(() => push({ k: "giveup", at: Date.now() }, true), [push]);
 
-  const reset = useCallback(() => {
-    sessionStorage.removeItem(key);
-    const fresh = [loadEvent()];
-    eventsRef.current = fresh;
-    setEvents(fresh);
-  }, [key]);
-
-  return { events, run, start, act, submit, giveUp, reset };
+  return { events, run, start, act, submit, giveUp };
 }
 
 export function useNow(active: boolean, intervalMs = 100): number {

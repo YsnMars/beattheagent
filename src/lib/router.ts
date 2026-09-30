@@ -29,9 +29,3 @@ export function href(path: string): string {
 export function navigate(path: string) {
   window.location.hash = path;
 }
-
-/** Absolute, shareable URL for an in-app path. */
-export function shareUrl(path: string): string {
-  const { origin, pathname } = window.location;
-  return `${origin}${pathname}#${path}`;
-}

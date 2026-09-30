@@ -2,62 +2,66 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { generateChallenge } from "../challenge/generate";
 import { STAGES } from "../challenge/types";
 import { GameScreen } from "../components/GameScreen";
-import { Intro } from "../components/Intro";
+import { Brand, Intro } from "../components/Intro";
 import { useAgentRun, type AgentRun } from "../game/agentRuns";
 import { deriveRun, elapsedAt, type RunEvent } from "../game/run";
-import { formatDuration } from "../lib/format";
-import { href } from "../lib/router";
-import { SiteHeader } from "./Landing";
-import { AgentFacts } from "./Results";
+import { formatDuration, formatSeconds, formatUsd } from "../lib/format";
 
 type Ptr = Extract<RunEvent, { k: "ptr" }>;
 type FeedItem = { at: number; kind: "api" | "ok" | "bad" | "msg" | "start"; text: string; shot?: string | null };
 
-const SPEEDS = [1, 2, 4, 8];
+const SPEEDS = [1, 2, 4];
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="page">
+      <header className="topbar">
+        <Brand />
+        <a className="btn-text" href="#/">
+          ← Back
+        </a>
+      </header>
+      <main className="replay">{children}</main>
+    </div>
+  );
+}
 
 export function Replay({ seed }: { seed: string }) {
   const run = useAgentRun(seed);
   useEffect(() => {
-    document.title = `Agent replay #${seed} — Beat the Agent`;
-  }, [seed]);
+    document.title = "Agent replay — Beat the Agent";
+  }, []);
   if (run === undefined)
     return (
-      <div className="page">
-        <SiteHeader />
-        <main className="results">
-          <div className="card muted">Loading replay…</div>
-        </main>
-      </div>
+      <Shell>
+        <p className="muted">Loading replay…</p>
+      </Shell>
     );
   if (run === null)
     return (
-      <div className="page">
-        <SiteHeader />
-        <main className="results">
-          <div className="card">
-            <h1>No agent run for #{seed}</h1>
-            <p className="muted">This seed hasn't been recorded. You can still play it, just without an opponent.</p>
-            <a className="btn-primary" href={href(`/play/${seed}`)}>
-              Play #{seed}
-            </a>
-          </div>
-        </main>
-      </div>
+      <Shell>
+        <p className="muted">There's no recorded agent run for this challenge.</p>
+      </Shell>
     );
-  return <ReplayPlayer run={run} />;
+  return (
+    <Shell>
+      <ReplayPlayer run={run} />
+    </Shell>
+  );
 }
 
 function ReplayPlayer({ run }: { run: AgentRun }) {
   const ch = useMemo(() => generateChallenge(run.seed), [run.seed]);
   const events = run.events;
   const startAt = events.find((e) => e.k === "start")?.at ?? events[0]?.at ?? 0;
-  const t0 = Math.min(events[0]?.at ?? startAt, startAt - 1000);
+  const t0 = startAt - 1500;
   const final = useMemo(() => deriveRun(ch, events), [ch, events]);
-  const tEnd = (final.finishedAt ?? final.gaveUpAt ?? events[events.length - 1]?.at ?? startAt) + 4000;
+  const tEnd = (final.finishedAt ?? final.gaveUpAt ?? events[events.length - 1]?.at ?? startAt) + 3000;
 
+  // Plays on arrival, in real time: the agent's speed is the point.
   const [cur, setCur] = useState(t0);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(2);
+  const [playing, setPlaying] = useState(true);
+  const [speed, setSpeed] = useState(1);
   const curRef = useRef(cur);
   curRef.current = cur;
 
@@ -80,167 +84,136 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
   const derived = useMemo(() => deriveRun(ch, events, cur), [ch, events, cur]);
   const ptrs = useMemo(() => events.filter((e): e is Ptr => e.k === "ptr"), [events]);
   const feed = useMemo(() => buildFeed(run, startAt), [run, startAt]);
-  const shot = [...feed].reverse().find((f) => f.shot && f.at <= cur)?.shot ?? null;
   const activeFeed = [...feed].reverse().find((f) => f.at <= cur);
+  const feedRef = useRef<HTMLOListElement>(null);
 
-  const markers = [
-    { at: startAt, label: "Start", cls: "start" },
-    ...events
-      .filter((e): e is Extract<RunEvent, { k: "submit" }> => e.k === "submit")
-      .map((e) => ({ at: e.at, label: e.ok ? `${STAGES.find((s) => s.id === e.s)!.title} ✓` : "Rejected", cls: e.ok ? "ok" : "bad" })),
-  ];
-  const pctOf = (at: number) => ((at - t0) / (tEnd - t0)) * 100;
+  useEffect(() => {
+    const list = feedRef.current;
+    const el = list?.querySelector<HTMLElement>(".active");
+    if (list && el) list.scrollTo({ top: el.offsetTop - list.clientHeight / 2, behavior: "smooth" });
+  }, [activeFeed]);
+
+  const markers = events
+    .filter((e): e is Extract<RunEvent, { k: "submit" }> => e.k === "submit")
+    .map((e) => ({ at: e.at, label: e.ok ? `${STAGES.find((s) => s.id === e.s)!.title} done` : "Rejected", cls: e.ok ? "ok" : "bad" }));
+  const pctOf = (at: number) => Math.max(0, ((at - t0) / (tEnd - t0)) * 100);
   const rel = cur - startAt;
 
+  const stats = [
+    run.finished ? formatSeconds(run.totalMs) : `${run.stagesCleared} of 3 tasks`,
+    `${run.counts.clicks} clicks`,
+    run.penalties ? `${run.penalties} wrong answer${run.penalties > 1 ? "s" : ""}` : "no wrong answers",
+    run.cost.total !== null ? `${formatUsd(run.cost.total)} in API cost` : null,
+  ].filter(Boolean);
+
   return (
-    <div className="page replay-page">
-      <SiteHeader />
-      <main className="replay">
-        <div className="replay-head">
-          <div>
-            <div className="kicker">Recorded agent run · challenge #{run.seed}</div>
-            <h1>
-              {run.modelLabel} {run.finished ? `finished in ${formatDuration(run.totalMs)}` : `cleared ${run.stagesCleared}/3 stages`}
-            </h1>
-            <p className="muted small">
-              Rebuilt from the page's own log of the agent's clicks and inputs in an OpenAI-hosted browser (viewport {run.page.vw}×{run.page.vh}). Screenshots and
-              activity titles come from the Agents API.
-            </p>
-          </div>
-          <a className="btn-primary" href={href(`/play/${run.seed}`)}>
-            Race this run
-          </a>
-        </div>
-
-        <div className="replay-grid">
-          <div className="replay-stage">
-            <ScaledFrame run={run} cur={cur} ptrs={ptrs}>
-              {derived.startedAt === null ? (
-                <div className="game">
-                  <header className="hud">
-                    <div className="hud-left">
-                      <span className="hud-logo">
-                        <span className="logo-mark">◆</span>
-                        <span className="hud-logo-text">Beat the Agent</span>
-                      </span>
-                    </div>
-                  </header>
-                  <Intro ch={ch} />
-                </div>
-              ) : (
-                <GameScreen
-                  ch={ch}
-                  run={derived}
-                  now={cur}
-                  overlay={
-                    derived.finishedAt !== null || derived.gaveUpAt !== null ? (
-                      <div className="finish">
-                        <div className="finish-card">
-                          <div className="finish-kicker">{derived.finishedAt ? "Challenge complete" : "Run ended"}</div>
-                          <div className="finish-time">{formatDuration(elapsedAt(derived, cur))}</div>
-                        </div>
-                      </div>
-                    ) : null
-                  }
-                />
-              )}
-            </ScaledFrame>
-
-            <div className="scrubber">
-              <button className="btn-primary small" onClick={() => (cur >= tEnd ? (setCur(t0), setPlaying(true)) : setPlaying(!playing))} data-testid="replay-play">
-                {playing ? "❚❚ Pause" : cur >= tEnd ? "↺ Replay" : "▶ Play"}
-              </button>
-              <div
-                className="scrub-track"
-                onPointerDown={(e) => {
-                  const r = e.currentTarget.getBoundingClientRect();
-                  const seek = (x: number) => setCur(t0 + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (tEnd - t0));
-                  seek(e.clientX);
-                  const move = (ev: PointerEvent) => seek(ev.clientX);
-                  const up = () => {
-                    window.removeEventListener("pointermove", move);
-                    window.removeEventListener("pointerup", up);
-                  };
-                  window.addEventListener("pointermove", move);
-                  window.addEventListener("pointerup", up);
-                }}
-              >
-                <div className="scrub-fill" style={{ width: `${pctOf(cur)}%` }} />
-                {markers.map((m, i) => (
-                  <span key={i} className={`scrub-mark ${m.cls}`} style={{ left: `${pctOf(m.at)}%` }} title={m.label} />
-                ))}
-              </div>
-              <span className="scrub-time">{rel < 0 ? `−${formatDuration(-rel, 0)}` : formatDuration(rel, 0)}</span>
-              <div className="speeds">
-                {SPEEDS.map((s) => (
-                  <button key={s} className={s === speed ? "on" : ""} onClick={() => setSpeed(s)}>
-                    {s}×
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="jump">
-              <span className="muted small">Jump to:</span>
-              <button onClick={() => setCur(startAt)}>Start</button>
-              {final.splits.map((_, i) => {
-                const at = events.filter((e) => e.k === "submit" && e.ok)[i]?.at;
-                return at ? (
-                  <button key={i} onClick={() => setCur(at - 3000)}>
-                    {STAGES[i].title} clear
-                  </button>
-                ) : null;
-              })}
-            </div>
-          </div>
-
-          <aside className="replay-side">
-            <div className="shot">
-              <div className="shot-label">Hosted-browser screenshot</div>
-              {shot ? <img src={`runs/${run.seed}/${shot}`} alt="Screenshot from the agent's hosted browser" /> : <div className="shot-empty">No screenshot yet</div>}
-            </div>
-            <ol className="feed">
-              {feed.map((f, i) => (
-                <li
-                  key={i}
-                  className={`feed-${f.kind} ${f === activeFeed ? "active" : ""} ${f.at > cur ? "future" : ""}`}
-                  onClick={() => setCur(f.at)}
-                >
-                  <span className="feed-t">{f.at - startAt < 0 ? "pre" : formatDuration(f.at - startAt, 0)}</span>
-                  <span className="feed-text">{f.text}</span>
-                </li>
-              ))}
-            </ol>
-          </aside>
-        </div>
-
-        <AgentFacts run={run} />
-        <PromptCard run={run} />
-      </main>
-    </div>
-  );
-}
-
-function PromptCard({ run }: { run: AgentRun }) {
-  return (
-    <section className="card">
-      <h2 className="card-title">Exactly what the agent was told</h2>
-      <div className="prompt-block">
-        <div className="kicker">Agent instructions</div>
-        <pre>{run.prompt.instructions}</pre>
-        <div className="kicker">Task message</div>
-        <pre>{run.prompt.task}</pre>
+    <>
+      <div className="replay-head">
+        <h1>How {run.modelLabel} did it</h1>
+        <p className="replay-stats">{stats.join(" · ")}</p>
       </div>
-      <p className="muted small">Everything else, including the rules and each stage's task, came from the same page you play.</p>
-    </section>
+
+      <div className="replay-grid">
+        <div className="replay-stage">
+          <ScaledFrame run={run} cur={cur} ptrs={ptrs}>
+            {derived.startedAt === null ? (
+              <div className="game">
+                <Intro ch={ch} />
+              </div>
+            ) : (
+              <GameScreen
+                ch={ch}
+                run={derived}
+                now={cur}
+                overlay={
+                  derived.finishedAt !== null || derived.gaveUpAt !== null ? (
+                    <div className="finish">
+                      <div className="finish-card">
+                        <div className="finish-kicker">{derived.finishedAt ? "Challenge complete" : "Run ended"}</div>
+                        <div className="finish-time">{formatDuration(elapsedAt(derived, cur))}</div>
+                      </div>
+                    </div>
+                  ) : null
+                }
+              />
+            )}
+          </ScaledFrame>
+
+          <div className="scrubber">
+            <button
+              className="play-btn"
+              onClick={() => (cur >= tEnd ? (setCur(t0), setPlaying(true)) : setPlaying(!playing))}
+              aria-label={playing ? "Pause" : "Play"}
+              data-testid="replay-play"
+            >
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden>
+                {playing ? <path d="M4 2h3v12H4zM9 2h3v12H9z" /> : <path d="M4 2l10 6-10 6z" />}
+              </svg>
+            </button>
+            <div
+              className="scrub-track"
+              onPointerDown={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                const seek = (x: number) => setCur(t0 + Math.min(1, Math.max(0, (x - r.left) / r.width)) * (tEnd - t0));
+                seek(e.clientX);
+                const move = (ev: PointerEvent) => seek(ev.clientX);
+                const up = () => {
+                  window.removeEventListener("pointermove", move);
+                  window.removeEventListener("pointerup", up);
+                };
+                window.addEventListener("pointermove", move);
+                window.addEventListener("pointerup", up);
+              }}
+            >
+              <div className="scrub-fill" style={{ width: `${pctOf(cur)}%` }} />
+              {markers.map((m, i) => (
+                <span key={i} className={`scrub-mark ${m.cls}`} style={{ left: `${pctOf(m.at)}%` }} title={m.label} />
+              ))}
+            </div>
+            <span className="scrub-time">{rel < 0 ? "0:00" : formatDuration(rel, 0)}</span>
+            <div className="speeds">
+              {SPEEDS.map((s) => (
+                <button key={s} className={s === speed ? "on" : ""} onClick={() => setSpeed(s)}>
+                  {s}×
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <ol className="feed" ref={feedRef} aria-label="What the agent did">
+          {feed.map((f, i) => (
+            <li key={i} className={`feed-${f.kind} ${f === activeFeed ? "active" : ""} ${f.at > cur ? "future" : ""}`} onClick={() => setCur(f.at)}>
+              <span className="feed-t">{f.at < startAt ? "" : formatDuration(f.at - startAt, 0)}</span>
+              <span className="feed-text">
+                {f.text}
+                {f.shot && <img src={`runs/${run.seed}/${f.shot}`} alt="What the agent's browser showed" />}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <details className="prompt">
+        <summary>What the agent was told</summary>
+        <pre>{run.prompt.instructions}</pre>
+        <pre>{run.prompt.task}</pre>
+        <p className="muted small">
+          Everything else came from the page itself. The agent ran in an OpenAI-hosted browser; this replay is rebuilt from the page's log of its clicks and
+          inputs.
+        </p>
+      </details>
+    </>
   );
 }
 
 function buildFeed(run: AgentRun, startAt: number): FeedItem[] {
   const items: FeedItem[] = [];
-  for (const a of run.activity) items.push({ at: startAt + a.t, kind: "api", text: a.title || "Browser activity", shot: a.shot });
-  for (const m of run.messages) items.push({ at: startAt + m.t, kind: "msg", text: `“${m.text}”` });
+  // Environment boot ("Connecting to the challenge" ×N) happens off the clock; keep only the lead-up to Start.
+  for (const a of run.activity) if (a.t > -2500) items.push({ at: startAt + a.t, kind: "api", text: a.title || "Browser activity", shot: a.shot });
+  for (const m of run.messages) items.push({ at: startAt + m.t, kind: "msg", text: `“${m.text.replace(/\*\*/g, "").trim()}”` });
   for (const e of run.events) {
-    if (e.k === "start") items.push({ at: e.at, kind: "start", text: "Pressed Start — timer running" });
+    if (e.k === "start") items.push({ at: e.at, kind: "start", text: "Pressed Start" });
     if (e.k === "submit") items.push({ at: e.at, kind: e.ok ? "ok" : "bad", text: e.ok ? `✓ ${e.msg}` : `✗ ${e.msg}` });
   }
   items.sort((a, b) => a.at - b.at);

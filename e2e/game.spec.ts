@@ -12,18 +12,23 @@ test.beforeEach(async ({ page }, info) => {
   info.annotations.push({ type: "seed", description: SEED });
 });
 
-test("landing page renders and links into a challenge", async ({ page }) => {
+test("home deals a challenge that starts in one click, without exposing the seed", async ({ page }) => {
   await page.goto("#/");
-  await expect(page.getByRole("heading", { name: /Beat the Agent/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
-  const cta = page.locator(".hero-actions a").first();
-  await cta.click();
   await expect(page.getByRole("button", { name: "Start challenge" })).toBeVisible();
+  const seed = await page.evaluate(() => sessionStorage.getItem("bta:current"));
+  expect(seed).toBeTruthy();
+  await expect(page.locator("body")).not.toContainText(seed!);
+  await page.getByRole("button", { name: "Start challenge" }).click();
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(seed!);
+  // A reload resumes the same dealt challenge.
+  await page.reload();
+  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem("bta:current"))).toBe(seed);
 });
 
-test("full run: three validated stages, one timer, results, and a shareable scorecard", async ({ page }, info) => {
+test("full run: three validated stages, one timer, then a fresh challenge", async ({ page }, info) => {
   await page.goto(`#/play/${SEED}`);
-  await expect(page.getByText(`Challenge #${SEED}`)).toBeVisible();
   // Nothing of the stages is visible before Start.
   await expect(page.locator(".appwin")).toHaveCount(0);
   await page.getByRole("button", { name: "Start challenge" }).click();
@@ -35,7 +40,7 @@ test("full run: three validated stages, one timer, results, and a shareable scor
   await page.locator(`[data-trace="shop:add:${wrong.id}"]`).click();
   await page.locator('[data-trace="shop:order"]').click();
   await expect(page.getByText(/Rejected \(\+15s\)/)).toBeVisible();
-  await expect(page.getByText("+15s pen.")).toBeVisible();
+  await expect(page.locator(".timer-pen")).toHaveText("+15s");
   await page.locator(`[data-trace="shop:remove:${wrong.id}"]`).click();
   await page.locator('[data-trace="shop:cart-close"]').click();
   await page.screenshot({ path: `test-results/shots/${info.project.name}-1-shopping.png` });
@@ -54,26 +59,14 @@ test("full run: three validated stages, one timer, results, and a shareable scor
   // Timer froze: it must not keep running after completion.
   await page.waitForTimeout(600);
   await expect(page.getByTestId("final-time")).toHaveText(finalTime!);
-  await expect(page.locator(".finish-splits li")).toHaveCount(3);
   await page.screenshot({ path: `test-results/shots/${info.project.name}-4-finish.png` });
 
-  await page.getByLabel("Name on your scorecard").fill("Robin");
-  await page.getByTestId("see-results").click();
-  await expect(page.getByTestId("results-time")).toHaveText(finalTime!);
-  await expect(page.getByText("Per-stage splits")).toBeVisible();
-  await page.screenshot({ path: `test-results/shots/${info.project.name}-5-results.png`, fullPage: true });
-
-  // The share link opens a scorecard that starts the identical challenge.
-  const link = await page.getByTestId("share-link").inputValue();
-  expect(link).toContain("#/c/");
-  await page.goto(link);
-  await expect(page.getByTestId("scorecard")).toContainText("Robin");
-  await expect(page.getByTestId("scorecard")).toContainText(finalTime!);
-  await page.screenshot({ path: `test-results/shots/${info.project.name}-6-card.png`, fullPage: true });
-  await page.getByTestId("take-challenge").click();
-  await expect(page.getByRole("heading", { name: "Three tasks. One clock." })).toBeVisible();
-  await page.getByRole("button", { name: "Start challenge" }).click();
-  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  // "Try another" deals a different, fresh challenge.
+  await page.getByTestId("next").click();
+  await expect(page.getByRole("button", { name: "Start challenge" })).toBeVisible();
+  const next = await page.evaluate(() => sessionStorage.getItem("bta:current"));
+  expect(next).toBeTruthy();
+  expect(next).not.toBe(SEED);
 });
 
 test("reloading mid-run resumes the same timer and stage", async ({ page }) => {

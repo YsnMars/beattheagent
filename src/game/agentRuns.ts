@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { randomSeed } from "../lib/rng";
 import type { RunEvent } from "./run";
 
 export type RunSummary = {
@@ -76,10 +77,39 @@ export function useAgentRun(seed: string): AgentRun | null | undefined {
   return run;
 }
 
-/** Today's challenge: the featured seed if set, otherwise rotate daily through recorded runs. */
-export function dailySeed(index: RunIndex): string | null {
-  if (!index.runs.length) return null;
-  if (index.featured && index.runs.some((r) => r.seed === index.featured)) return index.featured;
-  const sorted = [...index.runs].sort((a, b) => a.seed.localeCompare(b.seed));
-  return sorted[Math.floor(Date.now() / 86_400_000) % sorted.length].seed;
+const SEEN = "bta:seen";
+const CURRENT = "bta:current";
+
+/** The seed this tab is playing, if one was already picked. */
+export function currentSeed(): string | null {
+  return sessionStorage.getItem(CURRENT);
+}
+
+export function clearCurrentSeed() {
+  sessionStorage.removeItem(CURRENT);
+}
+
+/**
+ * Picks the next challenge for this tab: the featured seed on a first visit if set, otherwise a
+ * recorded seed this browser hasn't been dealt yet, so repeat visits rotate through the pool.
+ */
+export function nextSeed(index: RunIndex): string {
+  let seen: string[] = [];
+  try {
+    seen = JSON.parse(localStorage.getItem(SEEN) ?? "[]");
+  } catch {
+    /* corrupt entry: start over */
+  }
+  const seeds = index.runs.map((r) => r.seed);
+  let seed: string;
+  if (!seeds.length) seed = randomSeed();
+  else if (!seen.length && index.featured && seeds.includes(index.featured)) seed = index.featured;
+  else {
+    const fresh = seeds.filter((s) => !seen.includes(s));
+    const pool = fresh.length ? fresh : seeds.length > 1 ? seeds.filter((s) => s !== seen[seen.length - 1]) : seeds;
+    seed = pool[Math.floor(Math.random() * pool.length)];
+  }
+  localStorage.setItem(SEEN, JSON.stringify([...seen.filter((s) => s !== seed), seed].slice(-50)));
+  sessionStorage.setItem(CURRENT, seed);
+  return seed;
 }

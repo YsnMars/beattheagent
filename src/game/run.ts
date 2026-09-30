@@ -95,8 +95,6 @@ export function judge(ch: Challenge, stage: StageId, states: StageStates): Verdi
 // ---------------------------------------------------------------- results
 
 export type RunResult = {
-  seed: string;
-  name: string;
   stagesCleared: number;
   splits: number[];
   totalMs: number; // final elapsed (finish or give-up), incl. penalties
@@ -104,55 +102,12 @@ export type RunResult = {
   finished: boolean;
 };
 
-export function toResult(seed: string, run: DerivedRun, name = ""): RunResult {
+export function toResult(run: DerivedRun): RunResult {
   return {
-    seed,
-    name,
     stagesCleared: run.splits.length,
     splits: run.splits.map(Math.round),
     totalMs: Math.round(elapsedAt(run, run.finishedAt ?? run.gaveUpAt ?? Date.now())),
     penalties: run.penalties,
     finished: run.finishedAt !== null,
   };
-}
-
-/**
- * Head-to-head: finished runs compare total time; otherwise more stages cleared wins, and a tie
- * on stages goes to whoever cleared their last stage sooner. Returns <0 if `a` wins.
- */
-export function compareResults(a: Pick<RunResult, "stagesCleared" | "splits" | "totalMs" | "finished">, b: typeof a): number {
-  if (a.finished && b.finished) return a.totalMs - b.totalMs;
-  if (a.stagesCleared !== b.stagesCleared) return b.stagesCleared - a.stagesCleared;
-  if (a.stagesCleared === 0) return 0;
-  return a.splits[a.stagesCleared - 1] - b.splits[b.stagesCleared - 1];
-}
-
-function b64urlEncode(s: string): string {
-  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-function b64urlDecode(s: string): string {
-  return decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
-}
-
-export function encodeResult(r: RunResult): string {
-  return b64urlEncode(JSON.stringify([1, r.seed, r.name.slice(0, 24), r.splits, r.totalMs, r.penalties, r.finished ? 1 : 0]));
-}
-
-export function decodeResult(payload: string): RunResult | null {
-  try {
-    const [v, seed, name, splits, totalMs, penalties, finished] = JSON.parse(b64urlDecode(payload));
-    if (v !== 1 || typeof seed !== "string" || !Array.isArray(splits)) return null;
-    const clean = splits.slice(0, 3).map((x: unknown) => Math.max(0, Number(x) || 0));
-    return {
-      seed,
-      name: String(name ?? "").slice(0, 24),
-      splits: clean,
-      stagesCleared: clean.length,
-      totalMs: Math.max(0, Number(totalMs) || 0),
-      penalties: Math.max(0, Number(penalties) || 0),
-      finished: finished === 1 && clean.length === 3,
-    };
-  } catch {
-    return null;
-  }
 }
