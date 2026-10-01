@@ -1,4 +1,5 @@
 import { PENALTY_MS, type Rejection } from "../game/run";
+import { IconAlert } from "./Icons";
 
 /**
  * Why a submission was rejected, next to the button that submitted it. Each new rejection remounts it
@@ -7,18 +8,21 @@ import { PENALTY_MS, type Rejection } from "../game/run";
 export function RejectionNote({ rejection: r }: { rejection: Rejection }) {
   return (
     <div className="inline-error" role="alert" key={r.at}>
-      <div className="inline-error-head">
-        <b>{r.title}</b>
-        <span className="inline-error-pen">+{PENALTY_MS / 1000}s</span>
+      <IconAlert size={18} />
+      <div className="inline-error-main">
+        <div className="inline-error-head">
+          <b>{r.title}</b>
+          <span className="inline-error-pen">+{PENALTY_MS / 1000}s</span>
+        </div>
+        {r.problems.length === 1 && <p>{r.problems[0]}</p>}
+        {r.problems.length > 1 && (
+          <ul>
+            {r.problems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        )}
       </div>
-      {r.problems.length === 1 && <p>{r.problems[0]}</p>}
-      {r.problems.length > 1 && (
-        <ul>
-          {r.problems.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

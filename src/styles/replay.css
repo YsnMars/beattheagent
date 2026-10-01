@@ -1,0 +1,420 @@
+/* ==================================================================== replay
+   The real game UI at the viewer's own size, driven by the agent's log, under a floating player. */
+.replay {
+  padding-bottom: calc(92px + var(--safe-b));
+}
+.replay-stage {
+  pointer-events: none;
+  user-select: none;
+}
+.replay .hud {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "home score"
+    "track track";
+}
+.replay .hud-end {
+  display: none;
+}
+/* Watching, which stage the agent is on matters more than the room it takes. */
+.replay .game-head.compact:not(.peek) .stage-track {
+  display: flex;
+}
+.replay-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.replay-back {
+  pointer-events: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.replay-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px 4px;
+  border-radius: 99px;
+  background: var(--agent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  font-stretch: 118%;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.rec-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.rec-dot.paused {
+  animation: none;
+  opacity: 0.6;
+}
+.replay-title h1 {
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 750;
+  font-stretch: 108%;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The intro's Start button stays in the page (the agent clicks it) instead of pinning over the player. */
+.replay .intro-start {
+  position: static;
+}
+.replay .intro::after {
+  content: none;
+}
+/* The end sheet floats above the player instead of under it. */
+.replay .finish {
+  padding: 12px 10px calc(84px + var(--safe-b));
+}
+.replay .finish-card {
+  max-height: 100%;
+  border-radius: var(--r-xl);
+}
+/* The apps' docked actions sit above the player. */
+.replay .dock {
+  bottom: calc(80px + var(--safe-b));
+}
+
+/* Frames the screen while the agent is the one driving. */
+.agent-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 3px rgba(var(--glow), 0.85),
+    inset 0 0 26px 6px rgba(var(--glow), 0.5),
+    inset 0 0 90px 20px rgba(var(--glow), 0.28),
+    inset 0 0 220px 50px rgba(var(--glow), 0.14);
+  animation:
+    fade 0.4s both,
+    breathe 2.6s ease-in-out 0.4s infinite alternate;
+}
+.agent-vignette.paused {
+  animation-play-state: paused;
+}
+@keyframes breathe {
+  to {
+    opacity: 0.65;
+  }
+}
+
+/* ------------------------------------------------------------------ what the agent is doing */
+.agent-steps {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font);
+}
+.agent-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(290px, calc(100vw - 16px));
+  padding: 7px 12px 7px 9px;
+  border-radius: 11px;
+  background: #16151d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f4f3f8;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.3;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45);
+  transform-origin: left center;
+  transition:
+    transform 0.45s var(--ease),
+    opacity 0.45s ease,
+    color 0.45s ease;
+  /* Enters just after the older steps start moving down to make room. */
+  animation: step-in 0.4s var(--ease) 0.12s backwards;
+}
+/* The finished step dims its text but keeps an opaque pill, so busy content never shows through. */
+.agent-step.pos-1 {
+  color: #8f8d9c;
+}
+.agent-step.pos-2 {
+  opacity: 0;
+}
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+.step-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  font-size: 12px;
+  font-weight: 800;
+  animation: step-pop 0.3s var(--spring) backwards;
+}
+.step-icon.doing {
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #a796ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.agent-steps.paused .step-icon.doing {
+  animation-play-state: paused;
+}
+.step-icon.done {
+  color: #8f8d9c;
+}
+.step-icon.ok {
+  color: var(--lime);
+}
+.step-icon.bad {
+  color: #ff8a80;
+}
+@keyframes step-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* ------------------------------------------------------------------ the player */
+.replay-bar {
+  position: fixed;
+  left: calc(10px + var(--safe-l));
+  right: calc(10px + var(--safe-r));
+  bottom: calc(10px + var(--safe-b));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 8px 8px 8px;
+  border-radius: 24px;
+  background: var(--glass);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-2);
+}
+.play-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--on-lime);
+  transition: transform 0.12s;
+}
+.play-btn:active {
+  transform: scale(0.92);
+}
+.scrub-track {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  cursor: pointer;
+  touch-action: none;
+}
+.scrub-rail {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.scrub-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--agent);
+}
+.scrub-knob {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px var(--agent),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* Each submission on the timeline: a stage done, or a rejection. */
+.scrub-mark {
+  position: absolute;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 850;
+  box-shadow: 0 0 0 2px var(--surface);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.scrub-mark.passed.ok {
+  background: var(--lime);
+  color: var(--on-lime);
+}
+.scrub-mark.bad {
+  background: var(--bad);
+  color: #fff;
+}
+.scrub-time {
+  min-width: 34px;
+  font-size: 14px;
+  font-weight: 750;
+  font-stretch: 108%;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.speeds {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.speeds button {
+  min-width: 34px;
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.speeds button.on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+@media (max-width: 380px) {
+  .scrub-time {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ the replay's end */
+.replay-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 18px 0 8px;
+}
+.replay-stats div {
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  text-align: left;
+}
+.replay-stats dt {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.replay-stats dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  font-stretch: 110%;
+  font-variant-numeric: tabular-nums;
+}
+.prompt {
+  width: 100%;
+  text-align: left;
+}
+.prompt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 14.5px;
+  font-weight: 650;
+}
+.prompt-toggle:hover {
+  color: var(--text);
+}
+.prompt-toggle svg {
+  transition: transform 0.25s var(--ease);
+}
+.prompt.open .prompt-toggle svg {
+  transform: rotate(90deg);
+}
+/* Animating grid rows from 0fr to 1fr eases the height open without measuring it. */
+.prompt-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.3s var(--ease),
+    opacity 0.25s ease;
+}
+.prompt.open .prompt-body {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.prompt-body > div {
+  min-height: 0;
+  overflow: hidden;
+}
+.prompt pre {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.prompt-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}

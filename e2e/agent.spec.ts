@@ -24,7 +24,7 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await solveShopping(page, run.seed);
   // The next briefing opens with the race's result and the standings.
   const result = page.getByTestId("brief-cleared");
-  await expect(result).toContainText("✓ Shopping");
+  await expect(result).toContainText("Shopping");
   await expect(result.locator(".brief-verdict")).toHaveText(/^(You won by \d+\.\ds|.+ won by \d+\.\ds|A dead heat)$/);
   await ready(page);
   await solveCalendar(page, run.seed);

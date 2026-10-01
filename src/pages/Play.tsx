@@ -2,14 +2,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "reac
 import { generateChallenge } from "../challenge/generate";
 import { GameScreen } from "../components/GameScreen";
 import { Intro } from "../components/Intro";
-import { Outcome } from "../components/Outcome";
+import { Finish } from "../components/Outcome";
 import { Briefing, Countdown, GhostCursor, GoFlash } from "../components/Race";
 import { useAgentRun, useAgentSummary } from "../game/agentRuns";
 import { recordBest } from "../game/bests";
 import { toResult } from "../game/run";
 import { useNow, useRun } from "../game/useRun";
-import { formatDuration } from "../lib/format";
-import { href } from "../lib/router";
+import { buzz } from "../lib/haptics";
 
 type Props = {
   seed: string;
@@ -54,6 +53,13 @@ export function Play({ seed, rec, onNext, onHome, autoStart }: Props) {
     if (!rec && run.finishedAt !== null) recordBest(seed, toResult(run).totalMs);
   }, [rec, seed, run]);
 
+  // A tap of feedback on phones that have it: a short one for a cleared stage, a double for a penalty.
+  // Keyed on the verdict's time, so only one that just arrived buzzes, not one restored by a reload.
+  const verdict = run.feedback;
+  useEffect(() => {
+    if (!rec && verdict && Date.now() - verdict.at < 1000) buzz(verdict.ok ? 25 : [35, 60, 35]);
+  }, [rec, verdict?.at]);
+
   // Agent recordings start the clock right away. Before paint, so the intro never flashes. A resumed
   // run keeps its original start time.
   useLayoutEffect(() => {
@@ -71,41 +77,7 @@ export function Play({ seed, rec, onNext, onHome, autoStart }: Props) {
   const result = toResult(run);
 
   const overlay = ended ? (
-    <div className="finish" role="dialog" aria-label="Run complete">
-      <div className="finish-card">
-        {!ghost && <div className="finish-kicker">{run.finishedAt ? "Challenge complete" : "Run ended"}</div>}
-        {ghost ? (
-          <Outcome human={result} agent={ghost} />
-        ) : (
-          <>
-            <div className="finish-time" data-testid="final-time">
-              {formatDuration(result.totalMs)}
-            </div>
-            <div className="finish-sub">
-              {result.stagesCleared}/3 stages
-              {result.penalties > 0 && ` · ${result.penalties} wrong answer${result.penalties > 1 ? "s" : ""}`}
-            </div>
-          </>
-        )}
-        {!rec && (
-          <div className="finish-actions">
-            {ghost && (
-              <a className="btn-primary" href={href(`/replay/${seed}`)} data-testid="watch-agent">
-                Watch how the agent did it
-              </a>
-            )}
-            <button className={ghost ? "btn-ghost" : "btn-primary"} onClick={onNext} data-testid="next">
-              Try again
-            </button>
-          </div>
-        )}
-        {!rec && (
-          <button className="btn-text finish-home" onClick={onHome} data-testid="home">
-            Back to start
-          </button>
-        )}
-      </div>
-    </div>
+    <Finish human={result} agent={ghost} seed={seed} recording={!!rec} onNext={onNext} onHome={onHome} />
   ) : briefing ? (
     phase === "count" ? (
       <Countdown onDone={begin} />

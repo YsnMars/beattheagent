@@ -55,10 +55,9 @@ export function formatDuration(ms: number, decimals = 1): string {
   return `${minutes}:${secText}`;
 }
 
-/** Signed difference, e.g. "+12.3s" / "−4.0s" / "+1:02.5" */
-/** "22.7 seconds" for short times, "1:04.2" otherwise. */
-export function formatSeconds(ms: number): string {
-  return ms < 60_000 ? `${(ms / 1000).toFixed(1)} seconds` : formatDuration(ms);
+/** A stage time or a margin: "7.6s" for short ones, "1:04.2" otherwise. */
+export function gap(ms: number): string {
+  return ms < 60_000 ? `${(ms / 1000).toFixed(1)}s` : formatDuration(ms);
 }
 
 export function formatUsd(amount: number): string {

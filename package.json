@@ -13,9 +13,12 @@
     "agent:run": "tsx --env-file=.env scripts/run-agent.ts",
     "typecheck": "tsc -b",
     "serve": "tsx scripts/server.ts",
-    "og": "tsx scripts/render-og.ts"
+    "og": "tsx scripts/render-og.ts",
+    "icons": "tsx scripts/render-icons.ts"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
     "@vercel/analytics": "^2.0.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

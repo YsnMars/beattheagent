@@ -1,0 +1,568 @@
+/* ==================================================================== Cadence
+   A calm blue scheduling app. Phones: one day at a time with pinned tabs, and the new time docked at
+   the bottom. Wide screens: the side panel beside the full week. */
+.cal {
+  --cd: #2563eb;
+  --cd-deep: #1d4ed8;
+  --cd-line: #e5e9f1;
+  --cd-ink: #1c2230;
+  --cd-muted: #5b6477;
+  --cd-slot: 26px;
+  /* Room for the docked form on phones. */
+  padding-bottom: calc(132px + var(--safe-b));
+}
+
+/* ------------------------------------------------------------------ header */
+.cd-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #eef3ff, #f8faff);
+  border-bottom: 1px solid #dbe4fb;
+}
+.cd-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--cd-deep);
+}
+.cd-logo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(140deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 4px 10px -4px rgba(29, 78, 216, 0.7);
+}
+.cd-week {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+}
+.cd-tz {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--cd-muted);
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ the meeting and the people */
+.cd-side {
+  display: grid;
+  gap: 16px;
+  padding: 14px;
+  background: #fafbfd;
+  border-bottom: 1px solid var(--cd-line);
+}
+.cd-meeting {
+  padding: 14px;
+  border: 1px solid var(--cd-line);
+  border-radius: 16px;
+  background: #fff;
+}
+.cd-meeting-title {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.cd-meeting-meta {
+  font-size: 13.5px;
+  color: var(--cd-muted);
+}
+.cd-current {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #ffd2cb;
+  border-radius: 12px;
+  background: #fff3f1;
+  color: #9f2a17;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.cd-current svg {
+  flex: none;
+  margin-top: 1px;
+}
+.cd-current b {
+  font-weight: 700;
+}
+.cd-label {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--cd-muted);
+}
+.cd-people-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cd-person {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--cd-line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--cd-ink);
+  text-align: left;
+  transition: opacity 0.2s;
+}
+.cd-avatar {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #10131b;
+  font-size: 10.5px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.cd-person-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.cd-person-hours {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cd-muted);
+}
+.cd-person.off {
+  opacity: 0.45;
+}
+.cd-person.off .cd-avatar {
+  filter: grayscale(1);
+}
+.cd-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--cd-muted);
+}
+.cd-hatch {
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, #cfd5e1 0 3px, #eef1f6 3px 7px);
+}
+
+/* ------------------------------------------------------------------ the new time (a dock on phones) */
+.cd-form {
+  display: grid;
+  gap: 8px;
+  max-height: 60dvh;
+  overflow: auto;
+  padding: 10px 12px calc(10px + var(--safe-b));
+  background: rgba(255, 255, 255, 0.94);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--cd-line);
+  box-shadow: 0 -14px 30px -18px rgba(15, 18, 26, 0.35);
+}
+.cd-form-label,
+.cd-pick-summary {
+  display: none;
+}
+.cd-form .inline-error {
+  margin: 0;
+}
+.cd-form-row {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 8px;
+}
+.cd-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  border: 1px solid #d3d9e5;
+  border-radius: 13px;
+  background: #fff;
+}
+.cd-select:focus-within {
+  border-color: var(--cd);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+.cd-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 100%;
+  padding: 0 34px 0 13px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cd-ink);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cd-select svg {
+  position: absolute;
+  right: 11px;
+  pointer-events: none;
+  color: #8a91a1;
+}
+.cd-pick-summary {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cd-muted);
+}
+.cd-pick-summary.set {
+  color: var(--cd-deep);
+}
+.cd-save {
+  height: 52px;
+  border: 0;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #3b82f6, var(--cd));
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 10px 22px -12px rgba(37, 99, 235, 0.8);
+  transition: transform 0.12s;
+}
+.cd-save:active {
+  transform: scale(0.98);
+}
+
+/* ------------------------------------------------------------------ the grid */
+.cd-sticky {
+  position: sticky;
+  top: var(--head-h);
+  z-index: 6;
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--cd-line);
+}
+.cd-daytabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px 12px 6px;
+}
+.cd-daytabs button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  padding: 5px 0 6px;
+  border: 0;
+  border-radius: 13px;
+  background: #f1f4f9;
+  color: var(--cd-ink);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.cd-daytabs span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cd-muted);
+}
+.cd-daytabs b {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.cd-daytabs button.on {
+  background: var(--cd);
+  color: #fff;
+  box-shadow: 0 6px 14px -8px rgba(37, 99, 235, 0.9);
+}
+.cd-daytabs button.on span {
+  color: rgba(255, 255, 255, 0.82);
+}
+/* The day the new time is on. */
+.cd-daytabs button.picked::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cd);
+}
+.cd-daytabs button.on.picked::after {
+  background: #fff;
+}
+.cd-head,
+.cd-body {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  padding-right: 12px;
+}
+.cd-dayname {
+  display: none;
+}
+.cd-lanehead {
+  display: flex;
+  padding: 2px 0 8px;
+}
+.cd-lanehead span {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--cd-muted);
+}
+.cd-lanehead i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+}
+.cd-dayhead:not(.m-on),
+.cd-day:not(.m-on) {
+  display: none;
+}
+.cd-grid {
+  padding: 12px 0 16px;
+}
+.cd-gutter-cell {
+  height: var(--cd-slot);
+  padding-right: 8px;
+  font-size: 11px;
+  color: #8a91a1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-7px);
+}
+.cd-day {
+  position: relative;
+  border-left: 1px solid var(--cd-line);
+  cursor: pointer;
+}
+.cd-cell {
+  height: var(--cd-slot);
+  border-top: 1px solid #e9ecf2;
+}
+.cd-cell.half {
+  border-top-color: #f4f6f9;
+}
+.cd-lane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.cd-off {
+  position: absolute;
+  left: 1.5px;
+  right: 1.5px;
+  background: repeating-linear-gradient(135deg, rgba(160, 170, 190, 0.32) 0 3px, rgba(238, 241, 246, 0.3) 3px 7px);
+}
+.cd-event {
+  position: absolute;
+  left: 1.5px;
+  right: 1.5px;
+  overflow: hidden;
+  padding: 3px 4px;
+  border-radius: 6px;
+  color: #10131b;
+  font-size: 11px;
+  line-height: 1.15;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+.cd-event-who {
+  display: block;
+  font-weight: 800;
+}
+.cd-event-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+.cd-meet {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 2;
+  padding: 3px 5px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 800;
+  pointer-events: none;
+}
+.cd-meet span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cd-meet.current {
+  border: 2px dashed #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+.cd-meet.proposed {
+  border: 2px solid var(--cd-deep);
+  background: rgba(37, 99, 235, 0.17);
+  color: #1e3a8a;
+  box-shadow: 0 8px 22px -8px rgba(37, 99, 235, 0.75);
+  animation: meet-in 0.3s var(--spring);
+}
+@keyframes meet-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+.replay .cal {
+  padding-bottom: calc(220px + var(--safe-b));
+}
+
+/* ------------------------------------------------------------------ tablets */
+@container game (min-width: 640px) {
+  .cd-people-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .cd-tz {
+    flex-basis: auto;
+  }
+  .cd-form {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* ------------------------------------------------------------------ wide screens: the whole week */
+@container game (min-width: 960px) {
+  .cal {
+    padding-bottom: 0;
+  }
+  .cd-top {
+    padding: 12px 18px;
+  }
+  .cd-week {
+    margin-left: 8px;
+  }
+  .cd-tz {
+    margin-left: auto;
+  }
+  .cd-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+  .cd-side {
+    align-content: start;
+    gap: 18px;
+    padding: 16px;
+    border-right: 1px solid var(--cd-line);
+    border-bottom: 0;
+  }
+  .cd-people-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .cd-person {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-rows: auto;
+    padding: 7px 10px;
+  }
+  .cd-avatar {
+    grid-row: auto;
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+  .cd-form {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .cd-form-label,
+  .cd-pick-summary {
+    display: block;
+  }
+  .cd-form-label {
+    margin-bottom: 0;
+  }
+  .cd-select {
+    height: 42px;
+  }
+  .cd-select select {
+    font-size: 15px;
+  }
+  .cd-save {
+    height: 46px;
+    font-size: 15px;
+  }
+  .cd-grid-wrap {
+    min-width: 0;
+  }
+  .cd-daytabs,
+  .cd-lanehead {
+    display: none;
+  }
+  .cd-head,
+  .cd-body {
+    grid-template-columns: 52px repeat(5, minmax(0, 1fr));
+    padding-right: 14px;
+  }
+  .cd-dayhead:not(.m-on),
+  .cd-day:not(.m-on) {
+    display: block;
+  }
+  .cd-dayhead {
+    padding: 10px 0 8px;
+    text-align: center;
+  }
+  .cd-dayname {
+    display: inline;
+    font-size: 13px;
+    color: var(--cd-muted);
+  }
+  .cd-dayname b {
+    color: var(--cd-ink);
+    font-size: 17px;
+  }
+  .cd-grid {
+    padding: 10px 0 16px;
+  }
+  .cd-event {
+    font-size: 10.5px;
+  }
+}

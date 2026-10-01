@@ -58,7 +58,16 @@ export function startServer(opts: { port: number; root: string; acceptToken?: (t
         return;
       }
       const s = await stat(file).catch(() => null);
-      if (!s || !s.isFile()) file = join(root, "index.html");
+      if (!s || !s.isFile()) {
+        // Routing is hash-based, so a missing file is a 404, not the app: answering a script request
+        // (e.g. Vercel Analytics' /_vercel/insights/script.js, which only exists on Vercel) with HTML
+        // throws a syntax error in the page.
+        if (extname(path)) {
+          res.writeHead(404).end();
+          return;
+        }
+        file = join(root, "index.html");
+      }
       const data = await readFile(file);
       res.writeHead(200, {
         "content-type": TYPES[extname(file)] ?? "application/octet-stream",
