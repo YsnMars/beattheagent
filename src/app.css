@@ -815,15 +815,23 @@ button:disabled {
 .ghost-race .agent-cursor path {
   fill: var(--accent);
 }
-.ghost-race .agent-cursor.edge {
+.ghost-race .agent-cursor.edge,
+.ghost-race .agent-cursor.away {
   opacity: 0.4;
 }
-/* Waiting at the edge of the screen: point to where it's working. */
+/* In a panel you don't have open, it says which (--where); at the edge of the screen, it points to
+   where it's working. */
+.agent-bubble .ghost-tag::after {
+  content: var(--where, "");
+}
 .agent-bubble[data-edge="down"] .ghost-tag::after {
-  content: " ↓";
+  content: var(--where, "") " ↓";
 }
 .agent-bubble[data-edge="up"] .ghost-tag::after {
-  content: " ↑";
+  content: var(--where, "") " ↑";
+}
+.ghost-race.lap-done .ghost-tag::after {
+  content: none;
 }
 .ghost-race .agent-ripple {
   border-color: var(--accent);

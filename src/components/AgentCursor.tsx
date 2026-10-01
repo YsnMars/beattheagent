@@ -15,11 +15,23 @@ const STEP_FINISH_MS = 350; // a finished step shows its check this long before 
 const STEP_HOLD_MS = 700; // minimum time a new step stays on top before the next change
 
 /**
+ * Panels the agent can open that the player's page doesn't have open while racing it (it's their
+ * page, not the agent's). Clicks inside one have nothing to land on, so the pointer waits on the
+ * control that opens the panel (the first one shown) and says where it is.
+ */
+const PANELS: { inside: RegExp; openers: string[]; where: string }[] = [
+  { inside: /^shop:(drawer$|cart-close$|remove:|order$)/, openers: ["shop:cart", "shop:cartbar"], where: "in its cart" },
+  { inside: /^sheet:(dialog$|dcol:|dcancel$|dapply$)/, openers: ["sheet:dedupe"], where: "in Remove duplicates" },
+];
+
+/**
  * The agent's pointer, drawn over the live game UI at the viewer's own screen size. Clicks were
  * recorded against `data-trace` elements, so they're re-located in whatever layout the viewer
  * gets (desktop or mobile). With `follow` (the replay), the page scrolls to each target just before
  * the agent reaches it; without it (racing the agent), the page is the player's, so the pointer
  * sticks to its target as they scroll and waits at the edge of the screen when it's out of view.
+ * Racing, a target in a panel only the agent has open (see PANELS) puts the pointer on the
+ * panel's opener; any other missing target leaves it on the last thing it touched.
  */
 type CursorProps = {
   moves: Move[];
@@ -62,9 +74,19 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
       (
         document.querySelector(`${props.current.scope} .game-head, ${props.current.scope} .topbar`) ?? document.querySelector(".game-head")
       )?.getBoundingClientRect().bottom ?? 0;
+    const at = (el: HTMLElement, fx: number, fy: number) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left + fx * r.width, y: r.top + fy * r.height };
+    };
+    // Racing: the panel the agent is in that the player doesn't have open, if it's in one.
+    const panelOf = (m: Move | null) => (!props.current.follow && m && !find(m.tgt) ? (PANELS.find((p) => p.inside.test(m.tgt)) ?? null) : null);
     const locate = (m: Move) => {
-      const r = find(m.tgt)?.getBoundingClientRect();
-      return r ? { x: r.left + m.fx * r.width, y: r.top + m.fy * r.height } : null;
+      const el = find(m.tgt);
+      if (el) return at(el, m.fx, m.fy);
+      const panel = panelOf(m);
+      const openers = panel ? panel.openers.map(find).filter((o) => o !== null) : [];
+      const opener = openers.find(inView) ?? openers[0];
+      return opener ? at(opener, 0.5, 0.5) : null;
     };
     const inView = (el: HTMLElement) => {
       const r = el.getBoundingClientRect();
@@ -90,6 +112,13 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
     let click: { x: number; y: number; at: number } | null = null;
     const side = { left: false, up: false };
     let offset: { x: number; y: number } | null = null;
+    // The last thing the pointer landed on in the player's page, to rest on when a target is missing.
+    let rest: { el: HTMLElement; fx: number; fy: number } | null = null;
+    const restAt = () => (rest && rest.el.isConnected && shown(rest.el) ? at(rest.el, rest.fx, rest.fy) : null);
+    const land = (m: Move) => {
+      const el = find(m.tgt);
+      if (el) rest = { el, fx: m.fx, fy: m.fy };
+    };
     let lastFrame = performance.now();
 
     const tick = () => {
@@ -150,7 +179,7 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
 
       if (glide) {
         const m = moves[glide.idx];
-        glide.to = locate(m) ?? glide.to ?? glide.from;
+        glide.to = locate(m) ?? restAt() ?? glide.to ?? glide.from;
         const k = Math.min(1, (cur - glide.start) / (glide.end - glide.start));
         const ease = k * k * (3 - 2 * k);
         pos = {
@@ -159,18 +188,27 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
         };
         if (k >= 1) {
           landed = glide.idx;
-          click = { ...pos, at: cur };
+          land(m);
+          // A click in a panel the player can't see makes no ripple.
+          click = panelOf(m) ? null : { ...pos, at: cur };
           glide = null;
         }
       } else if (prev && landed !== i) {
         // Arrived here by seeking: jump to the click if its target is still on screen.
         landed = i;
+        land(prev);
         pos = locate(prev) ?? pos;
       } else if (!follow && prev && landed === i) {
-        // The player scrolls their own page: stay on the target.
-        pos = locate(prev) ?? pos;
+        // The player scrolls their own page: stay on the target, or on what it last touched.
+        pos = locate(prev) ?? restAt() ?? pos;
       }
       if (!follow) {
+        const panel = panelOf(glide ? moves[glide.idx] : prev);
+        c.classList.toggle("away", panel !== null);
+        if (b) {
+          if (panel) b.style.setProperty("--where", JSON.stringify(` · ${panel.where}`));
+          else b.style.removeProperty("--where");
+        }
         // Out of view, wait at the nearest edge.
         const x = Math.min(Math.max(pos.x, 8), window.innerWidth - 8);
         const y = Math.min(Math.max(pos.y, headY() + 4), floorY() - 8);
