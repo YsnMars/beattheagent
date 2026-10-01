@@ -16,11 +16,29 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await solveShopping(page, run.seed);
   await solveCalendar(page, run.seed);
   await solveSheet(page, run.seed);
-  await expect(page.getByText("Challenge complete")).toBeVisible();
+  // The headline is the result; both sides show a time; the agent's API cost is listed.
   await expect(page.getByTestId("takeaway")).toContainText(/agent/);
+  await expect(page.locator(".side.agent")).toContainText(/\d:\d\d\.\d/);
+  await expect(page.getByTestId("agent-cost")).toContainText(/\$\d|not reported/);
   await expect(page.locator(".osplit")).toHaveCount(3);
   await page.getByTestId("watch-agent").click();
   await expect(page.getByRole("heading", { name: `${run.modelLabel} replay` })).toBeVisible();
+});
+
+test("giving up shows where you stopped, next to the agent's full run", async ({ page }) => {
+  await page.goto(`#/play/${run.seed}`);
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await solveShopping(page, run.seed);
+  await expect(page.getByText("Stage 2 of 3 · Calendar")).toBeVisible();
+  await page.locator('[data-trace="hud:giveup"]').click();
+  await page.getByRole("dialog", { name: "Give up this run?" }).getByRole("button", { name: "Give up" }).click();
+  await expect(page.getByTestId("takeaway")).toContainText(/^You stopped on Calendar at \d:\d\d\.\d\. The agent (had finished by|finished in) \d:\d\d\.\d\.$/);
+  // Your time, not a stage count.
+  await expect(page.getByTestId("final-time")).toHaveText(/^\d:\d\d\.\d$/);
+  await expect(page.locator(".side").first()).toContainText("1 of 3 done");
+  await expect(page.getByTestId("split-shopping")).not.toContainText("—");
+  await expect(page.getByTestId("split-calendar")).toContainText(/stopped at \d+\.\ds/);
+  await expect(page.getByTestId("split-sheet")).toContainText("—");
 });
 
 test("replay rebuilds the agent's run from its recorded log at the viewer's size", async ({ page }, info) => {

@@ -99,6 +99,7 @@ export type RunResult = {
   splits: number[];
   totalMs: number; // final elapsed (finish or give-up), incl. penalties
   penalties: number;
+  attempts: number[]; // rejected submissions per stage
   finished: boolean;
 };
 
@@ -108,6 +109,7 @@ export function toResult(run: DerivedRun): RunResult {
     splits: run.splits.map(Math.round),
     totalMs: Math.round(elapsedAt(run, run.finishedAt ?? run.gaveUpAt ?? Date.now())),
     penalties: run.penalties,
+    attempts: [...run.attempts],
     finished: run.finishedAt !== null,
   };
 }

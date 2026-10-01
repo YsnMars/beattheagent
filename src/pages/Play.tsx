@@ -56,7 +56,7 @@ export function Play({ seed, rec, onNext, onHome, autoStart }: Props) {
   const overlay = ended ? (
     <div className="finish" role="dialog" aria-label="Run complete">
       <div className="finish-card">
-        <div className="finish-kicker">{run.finishedAt ? "Challenge complete" : "Run ended"}</div>
+        {!ghost && <div className="finish-kicker">{run.finishedAt ? "Challenge complete" : "Run ended"}</div>}
         {ghost ? (
           <Outcome human={result} agent={ghost} />
         ) : (
