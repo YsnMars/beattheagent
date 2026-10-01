@@ -332,12 +332,19 @@ button:disabled {
   padding-bottom: 14px;
 }
 .task p {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-size: 1.02rem;
+  line-height: 1.75;
   text-wrap: pretty;
 }
-.task b {
+/* Each condition in the task, marked inline like a chip so it can be found at a glance. */
+.task p b {
   font-weight: 650;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  white-space: nowrap; /* a condition never splits across lines */
 }
 .task-head {
   display: flex;
@@ -375,24 +382,6 @@ button:disabled {
 }
 .split-gap.even {
   color: var(--muted);
-}
-/* The task's requirements, one per chip. */
-.rules {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.rules li {
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  font-size: 0.88rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 .task-feedback {
   margin-top: 10px;
@@ -1850,18 +1839,12 @@ button:disabled {
   .task-cleared {
     font-size: 0.8rem;
   }
-  .rules {
-    gap: 5px;
-    margin-top: 6px;
-  }
-  .rules li {
-    padding: 2px 8px;
-    font-size: 0.8rem;
-    white-space: normal;
-  }
   .task p {
     font-size: 0.9rem;
-    line-height: 1.38;
+    line-height: 1.7;
+  }
+  .task p b {
+    padding: 0 5px;
   }
   .task-feedback {
     margin-top: 6px;

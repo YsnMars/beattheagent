@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { SHEET_COLUMNS, STAGES, type Challenge, type StageId } from "../challenge/types";
-import { sortLabel } from "../challenge/validate";
+import { STAGES, type Challenge, type StageId } from "../challenge/types";
+import { colList, sortLabel } from "../challenge/validate";
 import { formatDay, formatDuration, formatMoney } from "../lib/format";
 import { elapsedAt, PENALTY_MS, type DerivedRun } from "../game/run";
 import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/state";
@@ -11,43 +11,37 @@ import { Shopping } from "../stages/Shopping";
 import { Calendar, clashFor } from "../stages/Calendar";
 import { Sheet } from "../stages/Sheet";
 
-/** The task as a short lead-in plus one chip per requirement, so it can be re-checked at a glance. */
+/**
+ * The task, worded exactly as the recorded agent runs saw it. Its conditions are highlighted inline
+ * (see `.task p b`) so they can be re-checked at a glance without a second copy of the rules.
+ */
 export function TaskText({ ch, stage }: { ch: Challenge; stage: StageId }) {
-  let lead: ReactNode;
-  let rules: string[];
   if (stage === "shopping") {
     const s = ch.shopping;
-    lead = (
-      <>
-        Buy <b>one</b> pair of headphones that meets all three, then place the order.
-      </>
+    return (
+      <p>
+        Buy <b>one</b> pair of headphones that costs <b>{formatMoney(s.budgetCents)} or less</b>, is rated <b>{s.minRating.toFixed(1)}★ or higher</b>, and
+        arrives <b>by {formatDay(s.deadline)}</b>. Then place the order.
+      </p>
     );
-    rules = [`${formatMoney(s.budgetCents)} or less`, `${s.minRating.toFixed(1)}★ or higher`, `arrives by ${formatDay(s.deadline)}`];
-  } else if (stage === "calendar") {
+  }
+  if (stage === "calendar") {
     const c = ch.calendar;
     const clash = clashFor(c);
     const who = clash ? (clash.who.name === "You" ? "your" : `${clash.who.name.split(" ")[0]}'s`) : "someone's";
-    lead = (
-      <>
-        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a time that fits all of these, then save.
-      </>
+    return (
+      <p>
+        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time <b>this week (Mon–Fri)</b> when <b>all {c.attendees.length} attendees are free</b>{" "}
+        and <b>within everyone's working hours</b>. It lasts <b>{c.durationMin} minutes</b> and <b>starts on the hour or half hour</b>. Then save.
+      </p>
     );
-    rules = [`${c.durationMin} minutes`, "this week (Mon–Fri)", `all ${c.attendees.length} attendees free`, "in everyone's working hours", "starts at :00 or :30"];
-  } else {
-    const sh = ch.sheet;
-    const cols = sh.dupColumns.map((k) => SHEET_COLUMNS.find((c) => c.key === k)!.label).join(" + ");
-    lead = <>Remove the duplicate rows and sort what's left, then submit the sheet.</>;
-    rules = [`duplicates = same ${cols} (any letter case)`, `keep the ${sh.keepRule.label} row`, `sort by ${sortLabel(sh.sort)}`];
   }
+  const sh = ch.sheet;
   return (
-    <>
-      <p>{lead}</p>
-      <ul className="rules">
-        {rules.map((r) => (
-          <li key={r}>{r}</li>
-        ))}
-      </ul>
-    </>
+    <p>
+      Rows are duplicates when their <b>{colList(sh.dupColumns)}</b> {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter case). From each
+      duplicate group keep only the <b>{sh.keepRule.label}</b> row. Then sort the remaining rows by <b>{sortLabel(sh.sort)}</b> and submit the sheet.
+    </p>
   );
 }
 
