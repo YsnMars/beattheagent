@@ -138,6 +138,11 @@ export function elapsedAt(run: DerivedRun, now: number): number {
   return end - run.startedAt - run.pausedMs + run.penalties * PENALTY_MS;
 }
 
+/** Time on the current stage's own clock (each stage is a race of its own; their times add up to the total). */
+export function stageElapsedAt(run: DerivedRun, now: number): number {
+  return elapsedAt(run, now) - (run.splits[run.stageIndex - 1] ?? 0);
+}
+
 export function judge(ch: Challenge, stage: StageId, states: StageStates): Verdict {
   switch (stage) {
     case "shopping":

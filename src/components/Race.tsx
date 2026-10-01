@@ -1,23 +1,23 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { STAGES, type Challenge } from "../challenge/types";
 import type { AgentRun, RunSummary } from "../game/agentRuns";
-import type { DerivedRun } from "../game/run";
+import { stageElapsedAt, type DerivedRun } from "../game/run";
 import { useNow } from "../game/useRun";
 import { AgentCursor, buildMoves } from "./AgentCursor";
-import { SplitGap, TaskText } from "./GameScreen";
-import { gap } from "./Outcome";
+import { TaskText } from "./GameScreen";
+import { gap, stageTime } from "./Outcome";
 
 const COUNT_MS = 800; // per number in the countdown
 
 /**
- * The task for the stage that's about to start, on its own before the stage's app is in play. The
+ * The task for the stage that's about to start, on its own before the stage's app is in play. Each
+ * stage is a race of its own, like a grand prix: the card opens with the result of the last one. The
  * clock is stopped meanwhile (the agent read its instructions on the clock, which the card says).
  */
 export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: DerivedRun; ghost: RunSummary | null; onReady: () => void }) {
   const i = Math.min(run.stageIndex, STAGES.length - 1);
   const stage = STAGES[i];
-  const cleared = i > 0 ? STAGES[i - 1] : null;
-  const theirs = ghost?.splits[i] !== undefined ? ghost.splits[i] - (i > 0 ? ghost.splits[i - 1] : 0) : null;
+  const cleared = i > 0 && run.feedback?.ok ? i - 1 : null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -34,22 +34,17 @@ export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: Deri
   return (
     <div className="race-overlay brief" role="dialog" aria-label={`${stage.title} briefing`}>
       <div className="brief-card">
-        {cleared && run.feedback?.ok && (
-          <p className="brief-cleared" data-testid="brief-cleared">
-            ✓ {cleared.title} done
-            {ghost && <SplitGap run={run} ghost={ghost} stage={cleared.id} />}
-          </p>
-        )}
+        {cleared !== null && <RaceResult run={run} ghost={ghost} i={cleared} />}
         <div className="brief-kicker">
-          Stage {i + 1} of {STAGES.length} · {stage.app}
+          Race {i + 1} of {STAGES.length} · {stage.app}
         </div>
         <h2 className="brief-title">{stage.title}</h2>
         <div className="brief-task task">
           <TaskText ch={ch} stage={stage.id} />
         </div>
-        {theirs !== null && (
+        {ghost && ghost.stagesCleared >= i && (
           <p className="brief-agent">
-            {ghost!.modelLabel} did this one in <span className="agent-ink">{gap(theirs)}</span>. Its cursor races you on the page.
+            <span className="agent-ink">{ghost.modelLabel}</span>'s cursor races you on the page.
           </p>
         )}
         <button className="btn-primary brief-go" data-trace="brief:ready" onClick={onReady} autoFocus>
@@ -100,43 +95,43 @@ export function GoFlash() {
   );
 }
 
-/**
- * Two lanes, you and the agent, across the three stages, on the race clock. The agent's marker moves
- * evenly between its recorded stage splits; yours sits on the stage you're on and jumps when you clear it.
- */
-export function RaceTrack({ run, ghost, elapsed }: { run: DerivedRun; ghost: RunSummary; elapsed: number }) {
-  const n = STAGES.length;
-  const agentAt = (() => {
-    const i = ghost.splits.findIndex((s) => s > elapsed);
-    if (i === -1) return ghost.finished ? 1 : ghost.stagesCleared / n;
-    const from = i > 0 ? ghost.splits[i - 1] : 0;
-    return (i + (elapsed - from) / (ghost.splits[i] - from)) / n;
-  })();
-  const youAt = run.splits.length / n;
-  const agentDone = ghost.finished && ghost.totalMs <= elapsed;
-  const lane = (who: "you" | "agent", label: ReactNode, at: number, done: boolean) => (
-    <div className={`lane lane-${who} ${done ? "done" : ""}`}>
-      <span className="lane-label">{label}</span>
-      <span className="lane-track">
-        <span className="lane-fill" style={{ width: `${at * 100}%` }} />
-        {STAGES.slice(1).map((s, i) => (
-          <span key={s.id} className="lane-tick" style={{ left: `${((i + 1) / n) * 100}%` }} />
-        ))}
-        <span className="lane-mark" style={{ left: `${at * 100}%` }} />
-      </span>
-    </div>
-  );
+/** How the race just run went, and the standings after it (both times include wrong-answer penalties). */
+function RaceResult({ run, ghost, i }: { run: DerivedRun; ghost: RunSummary | null; i: number }) {
+  const title = STAGES[i].title;
+  const yours = stageTime(run.splits, i)!;
+  const theirs = ghost ? stageTime(ghost.splits, i) : null;
+  const by = (ms: number) => (Math.abs(ms) < 100 ? null : gap(Math.abs(ms)));
+  let verdict = null;
+  if (ghost && theirs === null) verdict = <>{ghost.modelLabel} never finished this one.</>;
+  else if (ghost && theirs !== null) {
+    const d = by(yours - theirs);
+    verdict = (
+      <>
+        {ghost.modelLabel}: <span className="agent-ink">{gap(theirs)}</span>. {d === null ? "A dead heat." : yours < theirs ? `You won by ${d}.` : `It won by ${d}.`}
+      </>
+    );
+  }
+  // Overall, over the races both have run.
+  const total = ghost && ghost.splits[i] !== undefined ? by(run.splits[i] - ghost.splits[i]) : null;
   return (
-    <div className="race" aria-label="Race progress" data-testid="race">
-      {lane("you", "You", youAt, run.finishedAt !== null)}
-      {lane("agent", "Agent", agentAt, agentDone)}
+    <div className="brief-result" data-testid="brief-cleared">
+      <p className="brief-cleared">
+        ✓ {title} in {gap(yours)}
+      </p>
+      {verdict && <p className="brief-verdict">{verdict}</p>}
+      {ghost && ghost.splits[i] !== undefined && (
+        <p className="brief-standing">
+          Overall after {i + 1} of {STAGES.length}:{" "}
+          {total === null ? "level with the agent" : run.splits[i] < ghost.splits[i] ? `you lead by ${total}` : `the agent leads by ${total}`}
+        </p>
+      )}
     </div>
   );
 }
 
 /**
- * The agent's cursor on your page, stage by stage: when you start a stage, it starts the same stage,
- * doing exactly what it did in its recorded run. (The race track shows the overall race.)
+ * The agent's cursor on your page: when you start a race, it starts the same one, doing exactly what it
+ * did in its recorded run, on the race's clock (so a wrong answer's penalty lets it jump ahead).
  */
 export function GhostCursor({ agent, run }: { agent: AgentRun; run: DerivedRun }) {
   const i = run.stageIndex;
@@ -147,23 +142,18 @@ export function GhostCursor({ agent, run }: { agent: AgentRun; run: DerivedRun }
     if (bounds[i] === undefined) return null;
     const from = bounds[i];
     const to = bounds[i + 1] ?? Infinity;
-    return {
-      from,
-      to,
-      moves: buildMoves(agent.events).filter((m) => m.at > from && m.at <= to),
-    };
+    return { from, moves: buildMoves(agent.events).filter((m) => m.at > from && m.at <= to), ms: stageTime(agent.splits, i) ?? Infinity };
   }, [agent, i]);
-  const stageFrom = run.stageFrom;
-  const live = lap !== null && stageFrom !== null && run.pausedSince === null && run.finishedAt === null && run.gaveUpAt === null;
+  const live = lap !== null && run.stageFrom !== null && run.pausedSince === null && run.finishedAt === null && run.gaveUpAt === null;
   const now = useNow(live, 200);
   if (!live) return null;
-  const t = now - stageFrom;
-  const done = t >= lap.to - lap.from;
+  const t = stageElapsedAt(run, now);
+  const done = t >= lap.ms;
   // Done: say so for a moment, then step out of the way.
-  if (done && t - (lap.to - lap.from) > 2500) return null;
+  if (done && t - lap.ms > 2500) return null;
   return (
-    <AgentCursor key={i} className={`ghost-race ${done ? "lap-done" : ""}`} moves={lap.moves} cur={() => lap.from + (Date.now() - stageFrom)} scope=".arena">
-      <span className="ghost-tag">{done ? `✓ ${STAGES[i].title} in ${gap(lap.to - lap.from)}` : agent.modelLabel}</span>
+    <AgentCursor key={i} className={`ghost-race ${done ? "lap-done" : ""}`} moves={lap.moves} cur={() => lap.from + stageElapsedAt(run, Date.now())} scope=".arena">
+      <span className="ghost-tag">{done ? `✓ ${STAGES[i].title} in ${gap(lap.ms)}` : agent.modelLabel}</span>
     </AgentCursor>
   );
 }

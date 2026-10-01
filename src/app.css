@@ -247,6 +247,11 @@ button:disabled {
   color: var(--bad);
   font-weight: 600;
 }
+.timer-total {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .timer.penalty .timer-value {
   color: var(--bad);
   animation: shake 0.4s;
@@ -563,79 +568,6 @@ button:disabled {
 }
 
 /* ------------------------------------------------------------------ race */
-/* You and the agent, one lane each, across the three stages. */
-.race {
-  flex: 1;
-  max-width: 380px;
-  display: grid;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-.lane {
-  display: grid;
-  grid-template-columns: 3.6em 1fr;
-  align-items: center;
-}
-.lane-label {
-  color: var(--muted);
-}
-.lane-agent .lane-label {
-  color: var(--accent);
-}
-.lane-track {
-  position: relative;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--line);
-}
-.lane-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 2px;
-  background: var(--text);
-  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.lane-agent .lane-fill {
-  background: var(--accent);
-  transition: none; /* moves with the clock */
-}
-.lane-tick {
-  position: absolute;
-  top: -2px;
-  width: 2px;
-  height: 8px;
-  margin-left: -1px;
-  background: var(--bg);
-}
-.lane-mark {
-  position: absolute;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border-radius: 50%;
-  background: var(--text);
-  box-shadow: 0 0 0 2px var(--bg);
-  transition: left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.lane-agent .lane-mark {
-  background: var(--accent);
-  transition: none;
-}
-/* You're somewhere inside the current stage: the marker breathes rather than pretending to know where. */
-.lane-you:not(.done) .lane-mark {
-  animation: lane-pulse 1.4s ease-in-out infinite alternate;
-}
-@keyframes lane-pulse {
-  to {
-    box-shadow: 0 0 0 5px rgba(127, 127, 127, 0.25);
-  }
-}
-.lane.done .lane-mark {
-  background: var(--ok);
-}
-
 /* Briefings, the countdown and "Go!" sit over the stage's app. */
 .race-overlay {
   position: fixed;
@@ -669,11 +601,26 @@ button:disabled {
     transform: translateY(10px) scale(0.98);
   }
 }
-.brief-cleared {
+/* The last race's result, like a podium card between races. */
+.brief-result {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 2px;
+}
+.brief-result p {
   margin: 0;
+}
+.brief-cleared {
   color: var(--ok);
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 650;
+}
+.brief-verdict {
+  font-size: 0.92rem;
+}
+.brief-standing {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 .brief-kicker {
   color: var(--muted);
@@ -747,8 +694,7 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   .count-n,
   .go .count-n,
-  .brief-card,
-  .lane-you:not(.done) .lane-mark {
+  .brief-card {
     animation: none;
   }
 }
@@ -2398,15 +2344,7 @@ button:disabled {
   }
 }
 @container game (max-width: 600px) {
-  .hud {
-    flex-wrap: wrap;
-  }
-  /* The race takes its own row under the timer. */
-  .race {
-    order: 3;
-    flex-basis: 100%;
-    max-width: none;
-    gap: 3px;
-    padding-bottom: 4px;
+  .timer-total {
+    display: none;
   }
 }

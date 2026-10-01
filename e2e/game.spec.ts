@@ -28,14 +28,14 @@ test("home deals a challenge that starts in one click, without exposing the seed
   expect(await page.evaluate(() => sessionStorage.getItem("bta:current"))).toBe(seed);
 });
 
-test("full run: three validated stages, one timer, then a fresh challenge", async ({ page }, info) => {
+test("full run: three validated stages, each its own race, then a fresh challenge", async ({ page, isMobile }, info) => {
   await page.goto(`#/play/${SEED}`);
   // Nothing of the stages is visible before Start.
   await expect(page.locator(".appwin")).toHaveCount(0);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   // Each stage opens with its task on its own, the clock stopped, then a countdown.
   const brief = page.getByRole("dialog", { name: "Shopping briefing" });
-  await expect(brief).toContainText("Stage 1 of 3");
+  await expect(brief).toContainText("Race 1 of 3");
   await expect(brief.locator(".task p b").first()).toBeVisible();
   await page.screenshot({ path: `test-results/shots/${info.project.name}-0-briefing.png` });
   await ready(page);
@@ -57,12 +57,15 @@ test("full run: three validated stages, one timer, then a fresh challenge", asyn
   await page.screenshot({ path: `test-results/shots/${info.project.name}-1-shopping.png` });
   await solveShopping(page, SEED);
 
-  // The clock stays stopped through the next briefing.
+  // The clock stays stopped through the next briefing. Each stage is a race on its own clock (the next
+  // one hasn't started), with the total so far beside it on wide screens.
   const calBrief = page.getByRole("dialog", { name: "Calendar briefing" });
-  await expect(calBrief).toContainText("✓ Shopping done");
-  const held = await page.getByTestId("timer").textContent();
+  await expect(calBrief).toContainText("✓ Shopping in");
+  await expect(page.getByTestId("timer")).toHaveText("0:00.0");
+  const total = isMobile ? null : await page.getByTestId("total").textContent();
   await page.waitForTimeout(600);
-  await expect(page.getByTestId("timer")).toHaveText(held!);
+  await expect(page.getByTestId("timer")).toHaveText("0:00.0");
+  if (total) await expect(page.getByTestId("total")).toHaveText(total);
   await ready(page);
   await expect(page.locator('.stage-track [aria-current="step"]', { hasText: "Calendar" })).toBeVisible();
   await page.screenshot({ path: `test-results/shots/${info.project.name}-2-calendar.png` });

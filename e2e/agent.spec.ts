@@ -12,17 +12,21 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await page.goto(`#/play/${run.seed}`);
   await expect(page.locator(".intro")).toContainText(run.modelLabel);
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  // The briefing says how long the agent took on this stage.
-  await expect(page.getByRole("dialog", { name: "Shopping briefing" })).toContainText(`${run.modelLabel} did this one in`);
+  // The briefing says the agent races you, without giving away its time.
+  const brief = page.getByRole("dialog", { name: "Shopping briefing" });
+  await expect(brief).toContainText(`${run.modelLabel}'s cursor races you`);
+  await expect(brief).not.toContainText(/\d+\.\ds/);
   await ready(page);
-  // The race status says who's ahead, not just where the agent is.
-  await expect(page.locator(".ghost")).toHaveText(/^(Agent (\d stages? ahead|also on \w+|finished · \d:\d\d\.\d)|You're \d stages? ahead)$/);
-  // Both lanes are on the track, and the agent's cursor races you on your own page.
-  await expect(page.getByTestId("race").locator(".lane")).toHaveCount(2);
+  // The race status is about this race: the agent is still going, or finished in its time.
+  await expect(page.locator(".ghost")).toHaveText(/^Agent (still racing|finished · \d+\.\ds)$/);
+  // The agent's cursor races you on your own page.
   await expect(page.locator(".ghost-race .ghost-tag")).toContainText(run.modelLabel);
   await solveShopping(page, run.seed);
-  // Clearing a stage shows your gap to the agent at that point, on the next briefing.
-  await expect(page.getByTestId("brief-cleared")).toContainText(/(behind|ahead of|level with) the agent/);
+  // The next briefing opens with the race's result and the standings.
+  const result = page.getByTestId("brief-cleared");
+  await expect(result).toContainText(/✓ Shopping in \d+\.\ds/);
+  await expect(result).toContainText(/(You won by|It won by) \d+\.\ds\.|A dead heat\./);
+  await expect(result).toContainText(/Overall after 1 of 3: (you lead by|the agent leads by|level with the agent)/);
   await ready(page);
   await solveCalendar(page, run.seed);
   await ready(page);

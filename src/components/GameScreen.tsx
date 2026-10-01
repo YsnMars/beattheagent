@@ -2,12 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { STAGES, type Challenge, type StageId } from "../challenge/types";
 import { colList, sortLabel, type Req } from "../challenge/validate";
 import { formatDay, formatDuration, formatMoney } from "../lib/format";
-import { elapsedAt, PENALTY_MS, type DerivedRun } from "../game/run";
+import { elapsedAt, PENALTY_MS, stageElapsedAt, type DerivedRun } from "../game/run";
 import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/state";
 import type { RunSummary } from "../game/agentRuns";
 import { Brand } from "./Intro";
-import { gap } from "./Outcome";
-import { RaceTrack } from "./Race";
+import { gap, stageTime } from "./Outcome";
 import { Shopping } from "../stages/Shopping";
 import { Calendar, clashFor } from "../stages/Calendar";
 import { Sheet } from "../stages/Sheet";
@@ -106,6 +105,9 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const stage = STAGES[stageIndex];
   const elapsed = elapsedAt(run, now);
   const done = run.finishedAt !== null;
+  // With briefings, each stage is a race of its own: the clock shows this race, and the total beside it.
+  const race = run.briefed && !done && run.gaveUpAt === null ? stageElapsedAt(run, now) : null;
+  const racePenalties = run.attempts[stageIndex] ?? 0;
   const noop = () => {};
   const act = onAct ?? noop;
   const submit = onSubmit ?? noop;
@@ -169,14 +171,20 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
                 <Brand />
               ))}
           </div>
-          {ghost && <RaceTrack run={run} ghost={ghost} elapsed={elapsed} />}
           <div className="hud-right">
-            {ghost && <Ghost ghost={ghost} elapsed={elapsed} youCleared={run.splits.length} />}
+            {ghost && race !== null && <Ghost ghost={ghost} stage={stageIndex} race={race} />}
             <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
               <span className="timer-value" data-testid="timer">
-                {formatDuration(elapsed)}
+                {formatDuration(race ?? elapsed)}
               </span>
-              {run.penalties > 0 && <span className="timer-pen">+{(run.penalties * PENALTY_MS) / 1000}s</span>}
+              {(race !== null ? racePenalties : run.penalties) > 0 && (
+                <span className="timer-pen">+{((race !== null ? racePenalties : run.penalties) * PENALTY_MS) / 1000}s</span>
+              )}
+              {race !== null && run.splits.length > 0 && (
+                <span className="timer-total" data-testid="total">
+                  Total {formatDuration(elapsed)}
+                </span>
+              )}
             </div>
             {onGiveUp && !done && run.gaveUpAt === null && (
               <Confirm
@@ -206,12 +214,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
                   );
                 })}
               </ol>
-              {recentClear && (
-                <span className="task-cleared">
-                  ✓ {recentClear.msg}
-                  {ghost && <SplitGap run={run} ghost={ghost} stage={recentClear.s} />}
-                </span>
-              )}
+              {recentClear && <span className="task-cleared">✓ {recentClear.msg}</span>}
               <button className="task-toggle" aria-expanded={peek} onClick={() => setPeek(!peek)}>
                 {peek ? "Less" : "Full task"}
               </button>
@@ -302,49 +305,24 @@ function Confirm({ trace, label, ariaLabel, triggerClass = "btn-text", title, bo
   );
 }
 
-/** Where you stand against the recorded agent run at this point in time. */
-function Ghost({ ghost, elapsed, youCleared }: { ghost: RunSummary; elapsed: number; youCleared: number }) {
-  const agentCleared = ghost.splits.filter((s) => s <= elapsed).length;
-  const stages = (n: number) => `${n} stage${n > 1 ? "s" : ""}`;
+/** The agent in the race you're running: still going, or done and in what time. */
+function Ghost({ ghost, stage, race }: { ghost: RunSummary; stage: number; race: number }) {
+  const theirs = stageTime(ghost.splits, stage);
   let text: string;
   let lead: "agent" | "you" | "even";
-  if (ghost.totalMs <= elapsed) {
-    text = ghost.finished ? `Agent finished · ${formatDuration(ghost.totalMs)}` : `Agent stopped after ${ghost.stagesCleared}/3`;
-    lead = ghost.finished ? "agent" : "you";
-  } else if (agentCleared > youCleared) {
-    text = `Agent ${stages(agentCleared - youCleared)} ahead`;
-    lead = "agent";
-  } else if (agentCleared < youCleared) {
-    text = `You're ${stages(youCleared - agentCleared)} ahead`;
+  if (theirs === null) {
+    text = ghost.stagesCleared === stage ? "Agent stopped in this race" : "Agent didn't get this far";
     lead = "you";
+  } else if (theirs <= race) {
+    text = `Agent finished · ${gap(theirs)}`;
+    lead = "agent";
   } else {
-    text = `Agent also on ${STAGES[Math.min(agentCleared, 2)].title}`;
+    text = "Agent still racing";
     lead = "even";
   }
   return (
-    <div className={`ghost lead-${lead}`} title="Where the recorded agent run was at this point in time">
+    <div className={`ghost lead-${lead}`} title="Where the recorded agent run was at this point in this race">
       {text}
     </div>
-  );
-}
-
-/** Your gap to the agent when you cleared a stage, like a split time in a race. */
-export function SplitGap({ run, ghost, stage }: { run: DerivedRun; ghost: RunSummary; stage: StageId }) {
-  const i = STAGES.findIndex((s) => s.id === stage);
-  const yours = run.splits[i];
-  const theirs = ghost.splits[i];
-  if (yours === undefined || theirs === undefined) return null;
-  const d = yours - theirs;
-  if (Math.abs(d) < 100) return <span className="split-gap even"> · level with the agent</span>;
-  return d > 0 ? (
-    <span className="split-gap behind" data-testid="split-gap">
-      {" "}
-      · {gap(d)} behind the agent
-    </span>
-  ) : (
-    <span className="split-gap ahead" data-testid="split-gap">
-      {" "}
-      · {gap(-d)} ahead of the agent
-    </span>
   );
 }
