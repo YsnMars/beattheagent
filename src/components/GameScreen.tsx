@@ -106,7 +106,8 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const elapsed = elapsedAt(run, now);
   const done = run.finishedAt !== null;
   // With briefings, each stage is a race of its own: the clock shows this race, and the total beside it.
-  const race = run.briefed && !done && run.gaveUpAt === null ? stageElapsedAt(run, now) : null;
+  // Behind the first briefing the run hasn't started yet, but it's the first race all the same.
+  const race = (run.briefed || run.startedAt === null) && !done && run.gaveUpAt === null ? stageElapsedAt(run, now) : null;
   const racePenalties = run.attempts[stageIndex] ?? 0;
   const noop = () => {};
   const act = onAct ?? noop;
