@@ -54,6 +54,30 @@ describe("run log", () => {
     expect(mid.states.shopping.cart).toEqual([sol.productIds[0]]);
   });
 
+  it("explains the latest rejection until the answer changes", () => {
+    const wrong = ch.shopping.products.find((p) => p.id !== sol.productIds[0])!.id;
+    const v = judge(ch, "shopping", { ...initialStates(ch), shopping: { ...initialStates(ch).shopping, cart: [wrong] } });
+    const events: RunEvent[] = [
+      { k: "start", at: 0 },
+      { k: "act", at: 1, s: "shopping", a: { type: "add", id: wrong } },
+      { k: "submit", at: 2, s: "shopping", ok: false, msg: v.message },
+    ];
+    const rejected = deriveRun(ch, events).rejection!;
+    expect(rejected.title).toMatch(/doesn't qualify/);
+    expect(rejected.problems.length).toBeGreaterThan(0);
+    expect(rejected.reqs.length).toBeGreaterThan(0);
+    expect(rejected.edited).toBe(false);
+    // Filters don't change the answer; the cart does, and undoing the change restores the explanation.
+    events.push({ k: "act", at: 3, s: "shopping", a: { type: "minRating", value: 4 } });
+    expect(deriveRun(ch, events).rejection!.edited).toBe(false);
+    events.push({ k: "act", at: 4, s: "shopping", a: { type: "remove", id: wrong } });
+    expect(deriveRun(ch, events).rejection!.edited).toBe(true);
+    events.push({ k: "act", at: 5, s: "shopping", a: { type: "add", id: wrong } });
+    expect(deriveRun(ch, events).rejection!.edited).toBe(false);
+    // An accepted submission clears it.
+    expect(deriveRun(ch, play()).rejection).toBeNull();
+  });
+
   it("ignores actions after finishing and submissions for the wrong stage", () => {
     const events = play();
     const extra: RunEvent[] = [...events, { k: "submit", at: 1e9, s: "calendar", ok: true, msg: "x" }];

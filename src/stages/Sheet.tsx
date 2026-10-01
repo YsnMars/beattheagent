@@ -1,17 +1,20 @@
 import { SHEET_COLUMNS, type SheetChallenge } from "../challenge/types";
 import type { SheetAction, SheetState } from "../game/state";
+import type { Rejection } from "../game/run";
+import { RejectionNote } from "../components/RejectionNote";
 
 type Props = {
   ch: SheetChallenge;
   state: SheetState;
   dispatch: (a: SheetAction) => void;
   onSubmit: () => void;
-  feedback: { ok: boolean; msg: string } | null;
+  /** The latest rejection, while it still describes the current answer. */
+  rejection: Rejection | null;
 };
 
 const LETTERS = "ABCDEFG";
 
-export function Sheet({ ch, state, dispatch, onSubmit, feedback }: Props) {
+export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const byId = new Map(ch.rows.map((r) => [r.id, r]));
   const rows = state.rows.map((id) => byId.get(id)!);
   const allSelected = state.selected.length > 0 && state.selected.length === rows.length;
@@ -45,10 +48,10 @@ export function Sheet({ ch, state, dispatch, onSubmit, feedback }: Props) {
           Submit sheet
         </button>
       </div>
-      {(state.toast || (feedback && !feedback.ok)) && (
+      {(state.toast || rejection) && (
         <div className="sheet-msgs">
           {state.toast && <div className="sheet-toast">{state.toast}</div>}
-          {feedback && !feedback.ok && <div className="inline-error">{feedback.msg}</div>}
+          {rejection && <RejectionNote rejection={rejection} />}
         </div>
       )}
 

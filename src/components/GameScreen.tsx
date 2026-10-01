@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { STAGES, type Challenge, type StageId } from "../challenge/types";
-import { colList, sortLabel } from "../challenge/validate";
+import { colList, sortLabel, type Req } from "../challenge/validate";
 import { formatDay, formatDuration, formatMoney } from "../lib/format";
 import { elapsedAt, PENALTY_MS, type DerivedRun } from "../game/run";
 import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/state";
@@ -13,15 +13,17 @@ import { Sheet } from "../stages/Sheet";
 
 /**
  * The task, worded exactly as the recorded agent runs saw it. Its conditions are highlighted inline
- * (see `.task p b`) so they can be re-checked at a glance without a second copy of the rules.
+ * (see `.task p b`) so they can be re-checked at a glance without a second copy of the rules. The ones
+ * the last rejected submission broke are marked until the next submission.
  */
-export function TaskText({ ch, stage }: { ch: Challenge; stage: StageId }) {
+export function TaskText({ ch, stage, failed = [] }: { ch: Challenge; stage: StageId; failed?: Req[] }) {
+  const b = (req: Req | null, children: ReactNode) => <b className={req && failed.includes(req) ? "failed" : undefined}>{children}</b>;
   if (stage === "shopping") {
     const s = ch.shopping;
     return (
       <p>
-        Buy <b>one</b> pair of headphones that costs <b>{formatMoney(s.budgetCents)} or less</b>, is rated <b>{s.minRating.toFixed(1)}★ or higher</b>, and
-        arrives <b>by {formatDay(s.deadline)}</b>. Then place the order.
+        Buy {b("shop:one", "one")} pair of headphones that costs {b("shop:budget", <>{formatMoney(s.budgetCents)} or less</>)}, is rated{" "}
+        {b("shop:rating", <>{s.minRating.toFixed(1)}★ or higher</>)}, and arrives {b("shop:deadline", <>by {formatDay(s.deadline)}</>)}. Then place the order.
       </p>
     );
   }
@@ -31,16 +33,18 @@ export function TaskText({ ch, stage }: { ch: Challenge; stage: StageId }) {
     const who = clash ? (clash.who.name === "You" ? "your" : `${clash.who.name.split(" ")[0]}'s`) : "someone's";
     return (
       <p>
-        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time <b>this week (Mon–Fri)</b> when <b>all {c.attendees.length} attendees are free</b>{" "}
-        and <b>within everyone's working hours</b>. It lasts <b>{c.durationMin} minutes</b> and <b>starts on the hour or half hour</b>. Then save.
+        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time {b("cal:week", "this week (Mon–Fri)")} when{" "}
+        {b("cal:free", <>all {c.attendees.length} attendees are free</>)} and {b("cal:hours", "within everyone's working hours")}. It lasts{" "}
+        {b(null, <>{c.durationMin} minutes</>)} and {b("cal:slot", "starts on the hour or half hour")}. Then save.
       </p>
     );
   }
   const sh = ch.sheet;
   return (
     <p>
-      Rows are duplicates when their <b>{colList(sh.dupColumns)}</b> {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter case). From each
-      duplicate group keep only the <b>{sh.keepRule.label}</b> row. Then sort the remaining rows by <b>{sortLabel(sh.sort)}</b> and submit the sheet.
+      Rows are duplicates when their {b("sheet:dups", colList(sh.dupColumns))} {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter
+      case). From each duplicate group keep only the {b("sheet:keep", sh.keepRule.label)} row. Then sort the remaining rows by{" "}
+      {b("sheet:sort", sortLabel(sh.sort))} and submit the sheet.
     </p>
   );
 }
@@ -72,6 +76,8 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const recentClear =
     run.feedback?.ok && run.stageIndex > 0 && run.feedback.s === STAGES[run.stageIndex - 1].id && now - run.feedback.at < 4000 ? run.feedback : null;
   const recentPenalty = fb && !fb.ok && now - fb.at < 1600;
+  const rejection = run.rejection?.s === stage.id ? run.rejection : null;
+  const note = rejection && !rejection.edited ? rejection : null;
 
   return (
     <div className="game">
@@ -147,12 +153,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
                 </span>
               )}
             </div>
-            <TaskText ch={ch} stage={stage.id} />
-            {fb && !fb.ok && (
-              <div className={`task-feedback ${recentPenalty ? "flash" : ""}`} role="alert">
-                <b>Rejected (+{PENALTY_MS / 1000}s):</b> {fb.msg}
-              </div>
-            )}
+            <TaskText ch={ch} stage={stage.id} failed={rejection?.reqs} />
           </section>
         )}
       </div>
@@ -161,12 +162,12 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
         {!done && (
           <div className={`appwin app-${stage.id}`} key={stage.id}>
             {stage.id === "shopping" && (
-              <Shopping ch={ch.shopping} state={run.states.shopping} dispatch={(a: ShopAction) => act("shopping", a)} onSubmit={submit} feedback={fb} />
+              <Shopping ch={ch.shopping} state={run.states.shopping} dispatch={(a: ShopAction) => act("shopping", a)} onSubmit={submit} rejection={note} />
             )}
             {stage.id === "calendar" && (
-              <Calendar ch={ch.calendar} state={run.states.calendar} dispatch={(a: CalAction) => act("calendar", a)} onSubmit={submit} feedback={fb} />
+              <Calendar ch={ch.calendar} state={run.states.calendar} dispatch={(a: CalAction) => act("calendar", a)} onSubmit={submit} rejection={note} />
             )}
-            {stage.id === "sheet" && <Sheet ch={ch.sheet} state={run.states.sheet} dispatch={(a: SheetAction) => act("sheet", a)} onSubmit={submit} feedback={fb} />}
+            {stage.id === "sheet" && <Sheet ch={ch.sheet} state={run.states.sheet} dispatch={(a: SheetAction) => act("sheet", a)} onSubmit={submit} rejection={note} />}
           </div>
         )}
         {overlay}

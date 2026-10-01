@@ -1,13 +1,16 @@
 import { CAL_SLOTS, CAL_START, SLOT_MIN, type CalendarChallenge } from "../challenge/types";
 import { formatClock, formatDay, monthDay, weekdayShort } from "../lib/format";
 import type { CalAction, CalState } from "../game/state";
+import type { Rejection } from "../game/run";
+import { RejectionNote } from "../components/RejectionNote";
 
 type Props = {
   ch: CalendarChallenge;
   state: CalState;
   dispatch: (a: CalAction) => void;
   onSubmit: () => void;
-  feedback: { ok: boolean; msg: string } | null;
+  /** The latest rejection, while it still describes the current answer. */
+  rejection: Rejection | null;
 };
 
 const CAL_END = CAL_START + CAL_SLOTS * SLOT_MIN;
@@ -18,7 +21,7 @@ export function clashFor(ch: CalendarChallenge) {
   return e ? { event: e, who: ch.attendees.find((a) => a.id === e.attendeeId)! } : null;
 }
 
-export function Calendar({ ch, state, dispatch, onSubmit, feedback }: Props) {
+export function Calendar({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const days = [0, 1, 2, 3, 4];
   const starts: number[] = [];
   for (let s = CAL_START; s + ch.durationMin <= CAL_END; s += SLOT_MIN) starts.push(s);
@@ -125,7 +128,7 @@ export function Calendar({ ch, state, dispatch, onSubmit, feedback }: Props) {
                 ? `${formatDay(ch.weekStart + state.pick.dayIndex)}, ${formatClock(state.pick.startMin)}–${formatClock(state.pick.startMin + ch.durationMin)}`
                 : "Click the calendar or choose a day and start time."}
             </div>
-            {feedback && !feedback.ok && <div className="inline-error">{feedback.msg}</div>}
+            {rejection && <RejectionNote rejection={rejection} />}
             <button className="btn-cal" data-trace="cal:save" onClick={onSubmit}>
               Save & notify attendees
             </button>

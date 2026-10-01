@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateChallenge } from "../src/challenge/generate";
 import { solveChallenge } from "../src/challenge/solve";
-import { checkCalendar, checkSheet, checkShopping, expectedSheet, removeDuplicates, sortRows } from "../src/challenge/validate";
+import { calendarProblems, checkCalendar, checkSheet, checkShopping, expectedSheet, productProblems, removeDuplicates, sortRows } from "../src/challenge/validate";
 import { dupKey } from "../src/challenge/validate";
 
 const seeds = Array.from({ length: 300 }, (_, i) => `T${i.toString(36).toUpperCase()}X`);
@@ -47,5 +47,31 @@ describe("challenge generation", () => {
     expect(checkSheet(ch.sheet, ch.sheet.rows.map((r) => r.id)).message).toMatch(/Duplicates remain/);
     expect(checkSheet(ch.sheet, [...sol.sheetIds].reverse()).message).toMatch(/wrong order/);
     expect(checkSheet(ch.sheet, sol.sheetIds.slice(1)).message).toMatch(/missing/);
+  });
+
+  it("explains every broken condition and names it", () => {
+    for (const seed of seeds.slice(0, 50)) {
+      const ch = generateChallenge(seed);
+      for (const p of ch.shopping.products) {
+        const v = checkShopping(ch.shopping, [p.id]);
+        if (v.ok) continue;
+        const problems = productProblems(ch.shopping, p.id);
+        expect(v.problems).toEqual(problems.map((x) => x.text));
+        expect(v.reqs).toEqual([...new Set(problems.map((x) => x.req))]);
+      }
+      // Every calendar conflict is listed, not just the first.
+      for (let d = 0; d < 5; d++) {
+        const start = ch.calendar.attendees.reduce((m, a) => Math.min(m, a.startMin), Infinity);
+        const pick = { dayIndex: d, startMin: start };
+        const v = checkCalendar(ch.calendar, pick);
+        if (v.ok || (d === ch.calendar.current.dayIndex && start === ch.calendar.current.startMin)) continue;
+        expect(v.problems).toHaveLength(calendarProblems(ch.calendar, d, start).length);
+      }
+    }
+    const ch = generateChallenge("MISTAKES");
+    const empty = checkShopping(ch.shopping, []);
+    expect(!empty.ok && empty.reqs).toEqual(["shop:one"]);
+    const unsorted = checkSheet(ch.sheet, [...solveChallenge(ch).sheetIds].reverse());
+    expect(!unsorted.ok && unsorted.reqs).toEqual(["sheet:sort"]);
   });
 });

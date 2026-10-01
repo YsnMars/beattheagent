@@ -345,6 +345,16 @@ button:disabled {
   border-radius: 6px;
   background: var(--surface);
   white-space: nowrap; /* a condition never splits across lines */
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    border-color 0.2s;
+}
+/* A condition the last rejected submission broke. */
+.task p b.failed {
+  color: var(--bad);
+  background: var(--bad-bg);
+  border-color: var(--bad);
 }
 .task-head {
   display: flex;
@@ -383,20 +393,6 @@ button:disabled {
 .split-gap.even {
   color: var(--muted);
 }
-.task-feedback {
-  margin-top: 10px;
-  border-left: 3px solid var(--bad);
-  background: var(--bad-bg);
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 0.92rem;
-}
-.task-feedback b {
-  color: var(--bad);
-}
-.task-feedback.flash {
-  animation: shake 0.4s;
-}
 .appwin {
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -416,7 +412,33 @@ button:disabled {
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 0.88rem;
+  line-height: 1.4;
   margin: 8px 0;
+  animation: shake 0.4s;
+}
+.inline-error-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inline-error-head b {
+  font-weight: 650;
+}
+.inline-error-pen {
+  flex: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.inline-error p {
+  margin: 2px 0 0;
+}
+.inline-error ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.inline-error li + li {
+  margin-top: 2px;
 }
 .empty {
   grid-column: 1 / -1;
@@ -1845,11 +1867,6 @@ button:disabled {
   }
   .task p b {
     padding: 0 5px;
-  }
-  .task-feedback {
-    margin-top: 6px;
-    padding: 6px 10px;
-    font-size: 0.85rem;
   }
   .arena {
     padding: 10px 8px 40px;

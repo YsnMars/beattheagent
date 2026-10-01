@@ -2,13 +2,16 @@ import { useMemo } from "react";
 import type { Product, ShoppingChallenge } from "../challenge/types";
 import { formatDay, formatMoney } from "../lib/format";
 import type { ShopAction, ShopSort, ShopState } from "../game/state";
+import type { Rejection } from "../game/run";
+import { RejectionNote } from "../components/RejectionNote";
 
 type Props = {
   ch: ShoppingChallenge;
   state: ShopState;
   dispatch: (a: ShopAction) => void;
   onSubmit: () => void;
-  feedback: { ok: boolean; msg: string } | null;
+  /** The latest rejection, while it still describes the current answer. */
+  rejection: Rejection | null;
 };
 
 const SORTS: { value: ShopSort; label: string }[] = [
@@ -41,7 +44,7 @@ export function visibleProducts(ch: ShoppingChallenge, s: ShopState): Product[] 
   return list.map((p, i) => ({ p, i })).sort((x, y) => cmp[s.sort](x.p, y.p) || x.i - y.i).map((x) => x.p);
 }
 
-export function Shopping({ ch, state, dispatch, onSubmit, feedback }: Props) {
+export function Shopping({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const products = useMemo(() => visibleProducts(ch, state), [ch, state]);
   const cartItems = state.cart.map((id) => ch.products.find((p) => p.id === id)!);
   const subtotal = cartItems.reduce((s, p) => s + p.priceCents, 0);
@@ -196,7 +199,7 @@ export function Shopping({ ch, state, dispatch, onSubmit, feedback }: Props) {
               <span>Subtotal</span>
               <strong>{formatMoney(subtotal)}</strong>
             </div>
-            {feedback && !feedback.ok && <div className="inline-error">{feedback.msg}</div>}
+            {rejection && <RejectionNote rejection={rejection} />}
             <button className="btn-shop btn-order" data-trace="shop:order" onClick={onSubmit}>
               Place order
             </button>

@@ -2,7 +2,7 @@
 // is derived from it, which is what makes reload-resume and exact agent replays possible.
 import type { Challenge, StageId } from "../challenge/types";
 import { STAGES } from "../challenge/types";
-import { checkCalendar, checkSheet, checkShopping, type Verdict } from "../challenge/validate";
+import { checkCalendar, checkSheet, checkShopping, type Req, type Verdict } from "../challenge/validate";
 import { applyAction, initialStates, makeSheetReducer, type AnyAction, type StageStates } from "./state";
 
 export const PENALTY_MS = 15_000;
@@ -23,10 +23,30 @@ export type DerivedRun = {
   penalties: number;
   attempts: number[]; // rejected submissions per stage
   feedback: { ok: boolean; msg: string; at: number; s: StageId } | null;
+  /** The latest rejected submission, explained point by point. */
+  rejection: Rejection | null;
   states: StageStates;
   finishedAt: number | null;
   gaveUpAt: number | null;
 };
+
+export type Rejection = {
+  at: number;
+  s: StageId;
+  title: string;
+  problems: string[];
+  reqs: Req[];
+  answer: string;
+  /** The answer has changed since, so the explanation no longer describes what's on screen. */
+  edited: boolean;
+};
+
+/** What a stage's submission is judged on, as a comparable key. */
+function answerOf(s: StageId, states: StageStates): string {
+  if (s === "shopping") return states.shopping.cart.join(",");
+  if (s === "calendar") return states.calendar.pick ? `${states.calendar.pick.dayIndex}@${states.calendar.pick.startMin}` : "";
+  return states.sheet.rows.join(",");
+}
 
 export function deriveRun(ch: Challenge, events: RunEvent[], until = Infinity): DerivedRun {
   const sheetReducer = makeSheetReducer(ch);
@@ -37,6 +57,7 @@ export function deriveRun(ch: Challenge, events: RunEvent[], until = Infinity): 
     penalties: 0,
     attempts: [0, 0, 0],
     feedback: null,
+    rejection: null,
     states: initialStates(ch),
     finishedAt: null,
     gaveUpAt: null,
@@ -50,6 +71,8 @@ export function deriveRun(ch: Challenge, events: RunEvent[], until = Infinity): 
       case "act":
         if (run.startedAt !== null && run.finishedAt === null && run.gaveUpAt === null) {
           run.states = applyAction(ch, run.states, e.s, e.a, sheetReducer);
+          // Changing the answer back makes the explanation true again.
+          if (run.rejection?.s === e.s) run.rejection.edited = answerOf(e.s, run.states) !== run.rejection.answer;
         }
         break;
       case "submit": {
@@ -57,6 +80,13 @@ export function deriveRun(ch: Challenge, events: RunEvent[], until = Infinity): 
         const idx = STAGES.findIndex((x) => x.id === e.s);
         if (idx !== run.stageIndex) break;
         run.feedback = { ok: e.ok, msg: e.msg, at: e.at, s: e.s };
+        run.rejection = null;
+        if (!e.ok) {
+          // The log keeps the one-line message; the full verdict is rebuilt from the state that was submitted.
+          const v = judge(ch, e.s, run.states);
+          const why = v.ok ? { title: e.msg, problems: [], reqs: [] } : v;
+          run.rejection = { at: e.at, s: e.s, title: why.title, problems: why.problems, reqs: why.reqs, answer: answerOf(e.s, run.states), edited: false };
+        }
         if (e.ok) {
           run.splits.push(e.at - run.startedAt + run.penalties * PENALTY_MS);
           run.stageIndex++;

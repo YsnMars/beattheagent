@@ -39,7 +39,11 @@ test("full run: three validated stages, one timer, then a fresh challenge", asyn
   const wrong = ch.shopping.products.find((p) => !solveChallenge(ch).productIds.includes(p.id))!;
   await page.locator(`[data-trace="shop:add:${wrong.id}"]`).click();
   await page.locator('[data-trace="shop:order"]').click();
-  await expect(page.getByText(/Rejected \(\+15s\)/)).toBeVisible();
+  const note = page.locator(".inline-error");
+  await expect(note).toContainText("doesn't qualify");
+  await expect(note).toContainText("+15s");
+  // The broken conditions are marked in the task text.
+  await expect(page.locator(".task p b.failed").first()).toBeVisible();
   await expect(page.locator(".timer-pen")).toHaveText("+15s");
   await page.locator(`[data-trace="shop:remove:${wrong.id}"]`).click();
   await page.locator('[data-trace="shop:cart-close"]').click();
