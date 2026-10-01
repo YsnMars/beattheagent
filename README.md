@@ -29,6 +29,12 @@ The repo includes recorded agent runs in `public/runs/`. Without any runs, `#/` 
 | `npm run og` | Re-render the social preview card `public/og.png` (1200×630) from `scripts/render-og.ts` |
 | `npm run agent:run -- --seeds K7M2Q` | Record a genuine agent run (costs API money; see below) |
 
+## Web Analytics
+
+Vercel Web Analytics is mounted in `src/App.tsx`. It tracks the app's hash routes as `/`, `/play/[seed]`, and `/replay/[seed]`, with the actual seed in the page path and no hash query parameters. Local development uses debug mode; production builds send page views.
+
+Enable Web Analytics in the Vercel project's Analytics tab, then deploy this build and visit the site to start collecting data. See the [Vercel setup guide](https://vercel.com/docs/analytics/quickstart).
+
 ## Recording agent runs
 
 ### Prerequisites
