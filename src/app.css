@@ -264,9 +264,42 @@ button:disabled {
     transform: translateX(3px);
   }
 }
-.ghost {
-  font-size: 0.85rem;
+/* Racing the agent, its status and your clock sit side by side as one small scoreboard. */
+.race-board {
+  display: flex;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.race-cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 0 12px;
+}
+.race-cell + .race-cell {
+  border-left: 1px solid var(--line);
+}
+.race-label {
+  font-size: 0.62rem;
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.race-board .timer-value,
+.ghost-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.ghost {
+  /* Room for "✓ 0:00.0", so the board doesn't shift when the agent finishes. */
+  min-width: 6.4em;
   white-space: nowrap;
 }
 .ghost.lead-agent {
@@ -286,6 +319,23 @@ button:disabled {
 }
 .hud .home-btn:hover .brand {
   color: var(--text);
+}
+/* Outlined so it reads as a button, not a label, on touch screens too. */
+.giveup-btn {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.giveup-btn:hover,
+.giveup-btn[aria-expanded="true"] {
+  border-color: var(--bad);
+  color: var(--bad);
 }
 .confirm {
   position: relative;
@@ -2077,11 +2127,19 @@ button:disabled {
   .hud .btn-text {
     white-space: nowrap;
   }
-  .ghost {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 0.78rem;
+  .race-board,
+  .giveup-btn {
+    height: 40px;
+  }
+  .race-cell {
+    padding: 0 10px;
+  }
+  .race-board .timer-value,
+  .ghost-value {
+    font-size: 1rem;
+  }
+  .giveup-btn {
+    padding: 0 12px;
   }
   .timer-value {
     font-size: 1.15rem;

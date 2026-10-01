@@ -18,7 +18,7 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await expect(brief).not.toContainText(/\d+\.\ds/);
   await ready(page);
   // The race status is about this race: the agent is still going, or finished in its time.
-  await expect(page.locator(".ghost")).toHaveText(/^Agent (still racing|finished · \d+\.\ds)$/);
+  await expect(page.locator(".ghost")).toHaveText(/^Agent(✓ )?\d:\d\d\.\d$/);
   // The agent's cursor races you on your own page.
   await expect(page.locator(".ghost-race .ghost-tag")).toContainText(run.modelLabel);
   await solveShopping(page, run.seed);

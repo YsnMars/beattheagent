@@ -140,6 +140,21 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   }, []);
   useEffect(() => setPeek(false), [stage.id]);
 
+  const pens = race !== null ? racePenalties : run.penalties;
+  const timer = (
+    <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
+      <span className="timer-value" data-testid="timer">
+        {formatDuration(race ?? elapsed)}
+      </span>
+      {pens > 0 && <span className="timer-pen">+{(pens * PENALTY_MS) / 1000}s</span>}
+      {race !== null && !ghost && run.splits.length > 0 && (
+        <span className="timer-total" data-testid="total">
+          Total {formatDuration(elapsed)}
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div className="game">
       {/* The HUD and the task stay pinned together so the instructions are always in view. */}
@@ -172,23 +187,21 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
               ))}
           </div>
           <div className="hud-right">
-            {ghost && race !== null && <Ghost ghost={ghost} stage={stageIndex} race={race} />}
-            <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
-              <span className="timer-value" data-testid="timer">
-                {formatDuration(race ?? elapsed)}
-              </span>
-              {(race !== null ? racePenalties : run.penalties) > 0 && (
-                <span className="timer-pen">+{((race !== null ? racePenalties : run.penalties) * PENALTY_MS) / 1000}s</span>
-              )}
-              {race !== null && run.splits.length > 0 && (
-                <span className="timer-total" data-testid="total">
-                  Total {formatDuration(elapsed)}
-                </span>
-              )}
-            </div>
+            {ghost && race !== null ? (
+              <div className="race-board">
+                <Ghost ghost={ghost} stage={stageIndex} race={race} />
+                <div className="race-cell">
+                  <span className="race-label">You</span>
+                  {timer}
+                </div>
+              </div>
+            ) : (
+              timer
+            )}
             {onGiveUp && !done && run.gaveUpAt === null && (
               <Confirm
                 trace="hud:giveup"
+                triggerClass="giveup-btn"
                 label="Give up"
                 title="Give up this run?"
                 body={ghost ? "You'll see how far you got next to the agent." : "You'll see how far you got."}
@@ -305,24 +318,33 @@ function Confirm({ trace, label, ariaLabel, triggerClass = "btn-text", title, bo
   );
 }
 
-/** The agent in the race you're running: still going, or done and in what time. */
+/**
+ * The agent in the race you're running: still going, or done and in what time. It's labelled and
+ * formatted like your own clock beside it so the two read as a pair ("Agent 0:07.5 · You 0:46.8").
+ */
 function Ghost({ ghost, stage, race }: { ghost: RunSummary; stage: number; race: number }) {
   const theirs = stageTime(ghost.splits, stage);
   let text: string;
+  let full: string;
   let lead: "agent" | "you" | "even";
   if (theirs === null) {
-    text = ghost.stagesCleared === stage ? "Agent stopped in this race" : "Agent didn't get this far";
+    text = ghost.stagesCleared === stage ? "stopped" : "out";
+    full = ghost.stagesCleared === stage ? "Agent stopped in this race" : "Agent didn't get this far";
     lead = "you";
   } else if (theirs <= race) {
-    text = `Agent finished · ${gap(theirs)}`;
+    text = `✓ ${formatDuration(theirs)}`;
+    full = `Agent finished in ${gap(theirs)}`;
     lead = "agent";
   } else {
-    text = "Agent still racing";
+    // Still going: its clock runs alongside yours.
+    text = formatDuration(race);
+    full = "Agent still racing";
     lead = "even";
   }
   return (
-    <div className={`ghost lead-${lead}`} title="Where the recorded agent run was at this point in this race">
-      {text}
+    <div className={`race-cell ghost lead-${lead}`} title="Where the recorded agent run was at this point in this race" aria-label={full}>
+      <span className="race-label">Agent</span>
+      <span className="ghost-value">{text}</span>
     </div>
   );
 }
