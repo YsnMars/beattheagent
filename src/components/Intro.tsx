@@ -6,7 +6,7 @@ import { PENALTY_MS, stageTime } from "../game/run";
 import type { RunSummary } from "../game/agentRuns";
 import { bestFor } from "../game/bests";
 import { Brand } from "./Brand";
-import { IconArrowRight, IconPlay, IconTrophy, STAGE_ICONS } from "./Icons";
+import { IconArrowRight, IconPlay, STAGE_ICONS } from "./Icons";
 
 type Props = {
   ch: Challenge;
@@ -42,18 +42,11 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
   return (
     <div className="intro">
       <div className="intro-bg" aria-hidden />
-      <header className="topbar">
-        {left ?? <Brand />}
-        {best && (
-          <span className="intro-best-chip" title="Your personal best">
-            <IconTrophy size={15} />
-            {gap(best.ms)}
-          </span>
-        )}
-      </header>
+      <header className="topbar">{left ?? <Brand />}</header>
 
       <main className="intro-main">
-        <section className="intro-hero">
+        {/* On phones the hero's parts join the page's flow (display: contents), so the course can sit between the dare and the fine print. */}
+        <div className="intro-hero">
           {ghost?.finished ? (
             <>
               <p className="eyebrow intro-eyebrow">
@@ -62,7 +55,7 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
               </p>
               <h1 className="intro-title">
                 <span className="intro-figure">{gap(ghost.totalMs)}</span>
-                <span className="intro-claim">That's how long it took an AI agent to do three everyday browser tasks.</span>
+                <span className="intro-claim">An AI agent's time on three everyday browser tasks.</span>
                 <span className="intro-dare">Can you do them faster?</span>
               </h1>
             </>
@@ -79,7 +72,7 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
             </>
           )}
           <p className="intro-sub">
-            Same tasks, same page, one clock. Wrong answers cost <b>{PENALTY_MS / 1000}&nbsp;seconds</b>.
+            Same tasks, same page, one clock. Wrong answers cost {PENALTY_MS / 1000}&nbsp;seconds.
           </p>
           {/* On phones Start is pinned to the bottom, under the thumb. The replay shows it too: the agent's first click lands here. */}
           <div className="intro-cta">
@@ -94,14 +87,22 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
             </button>
             {ghost && onStart && (
               <a className="btn btn-quiet btn-lg intro-watch" href={href(`/replay/${ch.seed}`)}>
-                <IconPlay size={14} />
+                <span className="intro-watch-icon">
+                  <IconPlay size={12} />
+                </span>
                 Watch {ghost.modelLabel} do it
               </a>
             )}
           </div>
-        </section>
+          {best && (
+            <p className="intro-best" data-testid="best">
+              {best.here ? "Your best on this challenge" : "Your best so far"}: <b>{gap(best.ms)}</b>
+            </p>
+          )}
+        </div>
 
-        <section className="intro-card" aria-label="The three races">
+        {/* The course, and with an agent to race, a bar chart of its lap on each task (one series, one baseline). */}
+        <section className={`intro-card ${ghost ? "laps" : ""}`} aria-label="The three races">
           {ghost && (
             <div className="intro-card-head">
               <span className="eyebrow">The course</span>
@@ -115,30 +116,23 @@ export function Intro({ ch, onStart, ghost, left }: Props) {
               return (
                 <li key={s.id}>
                   <span className={`it-icon it-${s.id}`}>
-                    <Icon size={20} />
+                    <Icon size={17} />
                   </span>
-                  <span className="it-n">0{i + 1}</span>
                   <b className="it-title">{s.title}</b>
-                  <span className="it-blurb">{s.blurb}</span>
                   {t !== null && (
                     <>
+                      <span className="it-bar" style={{ "--w": `${(t / longest) * 100}%` } as CSSProperties} aria-hidden />
                       <span className="it-time" title={`${ghost!.modelLabel}'s time on this task`}>
                         {gap(t)}
                       </span>
-                      <span className="it-bar" style={{ "--w": `${(t / longest) * 100}%` } as CSSProperties} aria-hidden />
                     </>
                   )}
+                  <span className="it-blurb">{s.blurb}</span>
                 </li>
               );
             })}
           </ol>
         </section>
-
-        {best && (
-          <p className="intro-best" data-testid="best">
-            {best.here ? "Your best on this challenge" : "Your best so far"}: <b>{gap(best.ms)}</b>
-          </p>
-        )}
       </main>
     </div>
   );
