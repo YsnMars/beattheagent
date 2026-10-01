@@ -6,3 +6,4 @@ playwright-report
 runs-work
 *.log
 *.tsbuildinfo
+media
