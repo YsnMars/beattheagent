@@ -12,7 +12,8 @@
     "e2e": "playwright test",
     "agent:run": "tsx --env-file=.env scripts/run-agent.ts",
     "typecheck": "tsc -b",
-    "serve": "tsx scripts/server.ts"
+    "serve": "tsx scripts/server.ts",
+    "og": "tsx scripts/render-og.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

@@ -26,6 +26,7 @@ The repo includes recorded agent runs in `public/runs/`. Without any runs, `#/` 
 | `npm run serve` | Serve `dist/` at http://127.0.0.1:4173 |
 | `npm test` | Unit tests: generator invariants on 300 seeds, validators, run-log replay, results |
 | `npm run e2e` | Playwright: full human run on desktop and mobile viewports (dealing a challenge, penalty, validation, you-vs-agent summary, replay, reload-resume, give-up) |
+| `npm run og` | Re-render the social preview card `public/og.png` (1200×630) from `scripts/render-og.ts` |
 | `npm run agent:run -- --seeds K7M2Q` | Record a genuine agent run (costs API money; see below) |
 
 ## Recording agent runs
