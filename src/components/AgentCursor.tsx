@@ -28,10 +28,10 @@ const PANELS: { inside: RegExp; openers: string[]; where: string }[] = [
  * The agent's pointer, drawn over the live game UI at the viewer's own screen size. Clicks were
  * recorded against `data-trace` elements, so they're re-located in whatever layout the viewer
  * gets (desktop or mobile). With `follow` (the replay), the page scrolls to each target just before
- * the agent reaches it; without it (racing the agent), the page is the player's, so the pointer
- * sticks to its target as they scroll and waits at the edge of the screen when it's out of view.
+ * the agent reaches it; without it (racing the agent), the page is the player's. The pointer stays
+ * still between moves and can glide out of the viewport toward a target the player has scrolled past.
  * Racing, a target in a panel only the agent has open (see PANELS) puts the pointer on the
- * panel's opener; any other missing target leaves it on the last thing it touched.
+ * panel's opener; any other missing target leaves it where it was.
  */
 type CursorProps = {
   moves: Move[];
@@ -104,13 +104,6 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
     let click: { x: number; y: number; at: number } | null = null;
     const side = { left: false, up: false };
     let offset: { x: number; y: number } | null = null;
-    // The last thing the pointer landed on in the player's page, to rest on when a target is missing.
-    let rest: { el: HTMLElement; fx: number; fy: number } | null = null;
-    const restAt = () => (rest && rest.el.isConnected && shown(rest.el) ? at(rest.el, rest.fx, rest.fy) : null);
-    const land = (m: Move) => {
-      const el = find(m.tgt);
-      if (el) rest = { el, fx: m.fx, fy: m.fy };
-    };
     let lastFrame = performance.now();
 
     const tick = () => {
@@ -171,7 +164,7 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
 
       if (glide) {
         const m = moves[glide.idx];
-        glide.to = locate(m) ?? restAt() ?? glide.to ?? glide.from;
+        glide.to = locate(m) ?? glide.to ?? glide.from;
         const k = Math.min(1, (cur - glide.start) / (glide.end - glide.start));
         const ease = k * k * (3 - 2 * k);
         pos = {
@@ -180,19 +173,14 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
         };
         if (k >= 1) {
           landed = glide.idx;
-          land(m);
           // A click in a panel the player can't see makes no ripple.
           click = panelOf(m) ? null : { ...pos, at: cur };
           glide = null;
         }
       } else if (prev && landed !== i) {
-        // Arrived here by seeking: jump to the click if its target is still on screen.
+        // Arrived here by seeking: jump to the click if its target is still in the page.
         landed = i;
-        land(prev);
         pos = locate(prev) ?? pos;
-      } else if (!follow && prev && landed === i) {
-        // The player scrolls their own page: stay on the target, or on what it last touched.
-        pos = locate(prev) ?? restAt() ?? pos;
       }
       if (!follow) {
         const panel = panelOf(glide ? moves[glide.idx] : prev);
@@ -201,12 +189,6 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
           if (panel) b.style.setProperty("--where", JSON.stringify(` · ${panel.where}`));
           else b.style.removeProperty("--where");
         }
-        // Out of view, wait at the nearest edge.
-        const x = Math.min(Math.max(pos.x, 8), window.innerWidth - 8);
-        const y = Math.min(Math.max(pos.y, headY() + 4), floorY() - 8);
-        c.classList.toggle("edge", x !== pos.x || y !== pos.y);
-        if (b) b.dataset.edge = y > pos.y ? "up" : y < pos.y ? "down" : "";
-        pos = { x, y };
       }
       c.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
 
@@ -217,6 +199,8 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
       } else rp.style.opacity = "0";
 
       if (b) {
+        // The label leaves the frame with the pointer, rather than waiting at a screen edge.
+        b.style.visibility = pos.x < 0 || pos.x >= window.innerWidth || pos.y < 0 || pos.y >= window.innerHeight ? "hidden" : "";
         // Beside the pointer, switching sides to stay on screen and clear of the replay controls.
         // Sides only flip back once there's room to spare, and the offset eases between sides.
         const floor = floorY() - 8;

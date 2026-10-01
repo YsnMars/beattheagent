@@ -378,12 +378,17 @@
 }
 
 /* ==================================================================== the agent's cursor */
-.agent-layer > * {
+.agent-layer {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
+  overflow: clip;
   z-index: 45;
   pointer-events: none;
+}
+.agent-layer > * {
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 .agent-cursor {
   filter: drop-shadow(0 3px 6px rgba(var(--glow), 0.5)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
@@ -406,20 +411,12 @@
   opacity: 0.88;
   transition: opacity 0.3s;
 }
-.ghost-race .agent-cursor.edge,
 .ghost-race .agent-cursor.away {
   opacity: 0.4;
 }
-/* In a panel you don't have open, it says which (--where); at the edge of the screen, it points to
-   where it's working. */
+/* In a panel you don't have open, it says which (--where). */
 .agent-bubble .ghost-tag::after {
   content: var(--where, "");
-}
-.agent-bubble[data-edge="down"] .ghost-tag::after {
-  content: var(--where, "") " ↓";
-}
-.agent-bubble[data-edge="up"] .ghost-tag::after {
-  content: var(--where, "") " ↑";
 }
 .ghost-race.lap-done .ghost-tag::after {
   content: none;
