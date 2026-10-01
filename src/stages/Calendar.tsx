@@ -123,15 +123,18 @@ export function Calendar({ ch, state, dispatch, onSubmit, rejection }: Props) {
                 ))}
               </select>
             </div>
-            <div className="cal-pick-summary">
-              {state.pick
-                ? `${formatDay(ch.weekStart + state.pick.dayIndex)}, ${formatClock(state.pick.startMin)}–${formatClock(state.pick.startMin + ch.durationMin)}`
-                : "Click the calendar or choose a day and start time."}
+            {/* Pinned to the bottom of small screens, so the time you tap in the grid can be saved from there. */}
+            <div className="cal-savebar">
+              <div className="cal-pick-summary">
+                {state.pick
+                  ? `${formatDay(ch.weekStart + state.pick.dayIndex)}, ${formatClock(state.pick.startMin)}–${formatClock(state.pick.startMin + ch.durationMin)}`
+                  : "Click the calendar or choose a day and start time."}
+              </div>
+              {rejection && <RejectionNote rejection={rejection} />}
+              <button className="btn-cal" data-trace="cal:save" onClick={onSubmit}>
+                Save & notify attendees
+              </button>
             </div>
-            {rejection && <RejectionNote rejection={rejection} />}
-            <button className="btn-cal" data-trace="cal:save" onClick={onSubmit}>
-              Save & notify attendees
-            </button>
           </div>
         </aside>
 
@@ -154,6 +157,15 @@ export function Calendar({ ch, state, dispatch, onSubmit, rejection }: Props) {
               {days.map((d) => (
                 <div key={d} className={`cal-dayhead ${state.mobileDay === d ? "m-on" : ""}`}>
                   <span>{weekdayShort(ch.weekStart + d)}</span> <b>{monthDay(ch.weekStart + d).split(" ")[1]}</b>
+                  {/* Whose column is whose, once a single day is wide enough to label them. */}
+                  <div className="cal-lanehead">
+                    {visible.map((a) => (
+                      <span key={a.id}>
+                        <i style={{ background: a.color }} />
+                        {a.initials}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

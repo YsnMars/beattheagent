@@ -226,10 +226,12 @@ function AgentCursor({ moves, cur, speed, steps, stepIdx, playing }: CursorProps
     let raf = 0;
     let scrolledFor = -1;
 
-    const find = (tgt: string) => {
-      const el = document.querySelector<HTMLElement>(`.replay-stage [data-trace="${CSS.escape(tgt)}"]`);
-      return el && el.getClientRects().length ? el : null;
-    };
+    const shown = (el: HTMLElement | null | undefined) => (el && el.getClientRects().length ? el : null);
+    // A narrow layout may hide the control the agent clicked and offer another in its place (the sheet's
+    // sort menu for its column sort buttons); that one names what it stands in for with `data-trace-for`.
+    const find = (tgt: string) =>
+      shown(document.querySelector<HTMLElement>(`.replay-stage [data-trace="${CSS.escape(tgt)}"]`)) ??
+      shown([...document.querySelectorAll<HTMLElement>(".replay-stage [data-trace-for]")].find((el) => tgt.startsWith(el.dataset.traceFor!) && shown(el)));
     const locate = (m: Move) => {
       const r = find(m.tgt)?.getBoundingClientRect();
       return r ? { x: r.left + m.fx * r.width, y: r.top + m.fy * r.height } : null;

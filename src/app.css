@@ -362,6 +362,11 @@ button:disabled {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* The collapsed header's parts; only small screens use them (see the responsive section). */
+.task-brief,
+.task-toggle {
+  display: none;
+}
 .stage-track {
   display: flex;
   flex-wrap: wrap;
@@ -1006,6 +1011,9 @@ button:disabled {
   padding: 12px;
   font-size: 1rem;
 }
+.shop-cartbar {
+  display: none; /* small screens only */
+}
 
 /* ------------------------------------------------------------------ calendar (Cadence) */
 .cal-top {
@@ -1190,6 +1198,9 @@ button:disabled {
   color: #1c2230;
   font-size: 1rem;
 }
+.cal-lanehead {
+  display: none; /* single-day view only */
+}
 .cal-gutter-cell {
   height: 24px;
   font-size: 0.7rem;
@@ -1358,6 +1369,9 @@ button:disabled {
 }
 .sheet-scroll {
   overflow-x: auto;
+}
+.sheet-cardbar {
+  display: none; /* small screens only */
 }
 .grid {
   border-collapse: collapse;
@@ -1833,6 +1847,25 @@ button:disabled {
   .cal-event {
     font-size: 0.72rem;
   }
+  .cal-lanehead {
+    display: flex;
+    margin-top: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #5b6477;
+  }
+  .cal-lanehead span {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .cal-lanehead i {
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+  }
 }
 @container game (max-width: 600px) {
   .hud,
@@ -1868,6 +1901,60 @@ button:disabled {
   .task p b {
     padding: 0 5px;
   }
+  .hud .btn-text {
+    white-space: nowrap;
+  }
+  .ghost {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.78rem;
+  }
+  .timer-value {
+    font-size: 1.15rem;
+  }
+  /* Scrolled into the app, the header keeps just the conditions; "Full task" brings the sentence back. */
+  .game-head.compact:not(.peek) .task > p:not(.task-brief) {
+    display: none;
+  }
+  .game-head.compact:not(.peek) .task-brief {
+    display: flex;
+  }
+  .task p.task-brief {
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 6px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .game-head.compact .task-toggle {
+    display: inline;
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  /* A cleared stage is announced over the page rather than pushing it down. */
+  .task-cleared {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    width: fit-content;
+    max-width: calc(100% - 24px);
+    margin: 0 auto;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    pointer-events: none;
+    animation: pop-in 0.16s ease-out;
+  }
   .arena {
     padding: 10px 8px 40px;
   }
@@ -1897,5 +1984,189 @@ button:disabled {
   }
   .sheet-toolbar .tb-grow {
     display: none;
+  }
+
+  /* Shopping: shorter product art, and the cart pinned to the bottom once it has something in it. */
+  .product {
+    padding: 8px;
+    gap: 2px;
+  }
+  .product .art {
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+  }
+  .shop.has-cart {
+    padding-bottom: 72px;
+  }
+  .shop-cartbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 25;
+    padding: 13px 20px;
+    border: 0;
+    border-radius: 999px;
+    background: #1c2230;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45);
+    animation: pop-in 0.16s ease-out;
+  }
+
+  /* Calendar: day tabs on one line, attendees two to a row, and saving pinned to the bottom. */
+  .cal-daytabs button {
+    flex: 1;
+    padding: 6px 4px;
+  }
+  .cal-people {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .cal-people .cal-side-label,
+  .cal-legend {
+    grid-column: 1 / -1;
+  }
+  .cal-person {
+    grid-template-columns: 12px minmax(0, 1fr);
+    row-gap: 0;
+    padding: 6px 8px;
+  }
+  .cal-person-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cal-person-hours {
+    grid-column: 2;
+    font-size: 0.8rem;
+  }
+  .cal {
+    padding-bottom: 110px;
+  }
+  .cal-savebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    max-height: 50vh;
+    overflow: auto;
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #e3e7ef;
+    box-shadow: 0 -10px 24px -14px rgba(0, 0, 0, 0.35);
+  }
+  .cal-savebar .cal-pick-summary {
+    margin: 0 0 6px;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+
+  /* Spreadsheet: each row becomes a card, so every column shows without scrolling sideways. */
+  .sheet-cardbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e3e7ef;
+    background: #f8fafc;
+    font-size: 0.86rem;
+  }
+  .sheet-cardbar label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sheet-cardbar select {
+    width: auto;
+    font-size: 0.86rem;
+  }
+  .grid {
+    display: block;
+    min-width: 0;
+  }
+  .grid thead {
+    display: none;
+  }
+  .grid tbody {
+    display: block;
+  }
+  .grid tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 10px;
+    row-gap: 1px;
+    position: relative;
+    padding: 8px 12px 8px 48px;
+    border-bottom: 1px solid #e3e7ef;
+  }
+  .grid tbody tr.sel {
+    background: #e7f0ff;
+  }
+  .grid tbody td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* The row carries the selection and hover colors; its cells stay clear. */
+  .grid tbody tr.sel td,
+  .grid tbody tr:hover td {
+    background: none;
+  }
+  .grid tbody td.rownum {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 44px;
+    padding: 9px 0 0 12px;
+  }
+  .grid .rownum label {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .grid .c-name {
+    order: 1;
+    flex: 1 1 0;
+    font-weight: 650;
+  }
+  .grid .c-company {
+    order: 2;
+    max-width: 55%;
+  }
+  .grid .c-email {
+    order: 3;
+    flex: 1 1 100%;
+  }
+  .grid .c-plan,
+  .grid .c-seats,
+  .grid .c-updated {
+    order: 4;
+    font-size: 0.8rem;
+    text-align: left;
+  }
+  .grid td[data-label]::before {
+    content: attr(data-label) " ";
+    font-family: var(--font);
+    color: #8a91a1;
+  }
+
+  /* In a replay, the pinned bars sit above the playback controls. */
+  .replay .shop-cartbar {
+    bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+  .replay .cal-savebar {
+    bottom: calc(55px + env(safe-area-inset-bottom));
   }
 }

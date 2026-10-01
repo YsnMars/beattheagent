@@ -24,13 +24,20 @@ export async function solveCalendar(page: Page, seed: string) {
   await page.locator('[data-trace="cal:save"]').click();
 }
 
+/** Column sort buttons on wide screens; the sort menu that replaces them on small ones. */
+async function sortSheet(page: Page, column: string, dir: string) {
+  const button = page.locator(`[data-trace="sheet:sort:${column}:${dir}"]`);
+  if (await button.isVisible()) await button.click();
+  else await page.locator('[data-trace="sheet:sortmenu"]').selectOption(`${column}:${dir}`);
+}
+
 export async function solveSheet(page: Page, seed: string) {
   const { sheet } = generateChallenge(seed);
   // Newest first, remove duplicates (keeps the top row = most recent), then the requested sort.
-  await page.locator('[data-trace="sheet:sort:updated:desc"]').click();
+  await sortSheet(page, "updated", "desc");
   await page.locator('[data-trace="sheet:dedupe"]').click();
   for (const c of sheet.dupColumns) await page.locator(`[data-trace="sheet:dcol:${c}"]`).check();
   await page.locator('[data-trace="sheet:dapply"]').click();
-  await page.locator(`[data-trace="sheet:sort:${sheet.sort.column}:${sheet.sort.dir}"]`).click();
+  await sortSheet(page, sheet.sort.column, sheet.sort.dir);
   await page.locator('[data-trace="sheet:submit"]').click();
 }

@@ -52,7 +52,7 @@ export function Shopping({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const filtersActive = !!(state.query || state.maxPrice || state.minRating || state.arriveBy);
 
   return (
-    <div className="shop">
+    <div className={`shop ${cartItems.length ? "has-cart" : ""}`}>
       <div className="shop-top">
         <div className="shop-logo">
           <span className="shop-logo-mark">♪</span> SoundMarket
@@ -168,6 +168,14 @@ export function Shopping({ ch, state, dispatch, onSubmit, rejection }: Props) {
         </section>
       </div>
 
+      {/* Small screens: the cart stays one tap away once there's something in it. */}
+      {cartItems.length > 0 && !state.cartOpen && (
+        <button className="shop-cartbar" data-trace="shop:cartbar" onClick={() => dispatch({ type: "cart", open: true })}>
+          <span>View cart ({cartItems.length})</span>
+          <strong>{formatMoney(subtotal)}</strong>
+        </button>
+      )}
+
       {state.cartOpen && (
         <div className="drawer-scrim" onClick={() => dispatch({ type: "cart", open: false })}>
           <aside className="drawer" onClick={(e) => e.stopPropagation()} data-trace="shop:drawer">
@@ -233,7 +241,7 @@ export function HeadphoneArt({ hue, style, small }: { hue: number; style: Produc
   const light = `hsl(${hue} 70% 88%)`;
   const inEar = style === "In-ear" || style === "Open-ear";
   return (
-    <svg className={small ? "art art-small" : "art"} viewBox="0 0 120 90" aria-hidden>
+    <svg className={small ? "art art-small" : "art"} viewBox="0 0 120 90" preserveAspectRatio="xMidYMid slice" aria-hidden>
       <rect width="120" height="90" rx="12" fill={light} />
       {inEar ? (
         <g>

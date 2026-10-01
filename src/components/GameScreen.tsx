@@ -14,16 +14,29 @@ import { Sheet } from "../stages/Sheet";
 /**
  * The task, worded exactly as the recorded agent runs saw it. Its conditions are highlighted inline
  * (see `.task p b`) so they can be re-checked at a glance without a second copy of the rules. The ones
- * the last rejected submission broke are marked until the next submission.
+ * the last rejected submission broke are marked until the next submission. `brief` lists just the
+ * conditions, for the collapsed header on small screens.
  */
-export function TaskText({ ch, stage, failed = [] }: { ch: Challenge; stage: StageId; failed?: Req[] }) {
+export function TaskText({ ch, stage, failed = [], brief }: { ch: Challenge; stage: StageId; failed?: Req[]; brief?: boolean }) {
   const b = (req: Req | null, children: ReactNode) => <b className={req && failed.includes(req) ? "failed" : undefined}>{children}</b>;
   if (stage === "shopping") {
     const s = ch.shopping;
+    const one = b("shop:one", "one");
+    const budget = b("shop:budget", <>{formatMoney(s.budgetCents)} or less</>);
+    const rating = b("shop:rating", <>{s.minRating.toFixed(1)}★ or higher</>);
+    const deadline = b("shop:deadline", <>by {formatDay(s.deadline)}</>);
+    if (brief)
+      return (
+        <p className="task-brief">
+          <span>Buy {one}</span>
+          {budget}
+          {rating}
+          {deadline}
+        </p>
+      );
     return (
       <p>
-        Buy {b("shop:one", "one")} pair of headphones that costs {b("shop:budget", <>{formatMoney(s.budgetCents)} or less</>)}, is rated{" "}
-        {b("shop:rating", <>{s.minRating.toFixed(1)}★ or higher</>)}, and arrives {b("shop:deadline", <>by {formatDay(s.deadline)}</>)}. Then place the order.
+        Buy {one} pair of headphones that costs {budget}, is rated {rating}, and arrives {deadline}. Then place the order.
       </p>
     );
   }
@@ -31,20 +44,43 @@ export function TaskText({ ch, stage, failed = [] }: { ch: Challenge; stage: Sta
     const c = ch.calendar;
     const clash = clashFor(c);
     const who = clash ? (clash.who.name === "You" ? "your" : `${clash.who.name.split(" ")[0]}'s`) : "someone's";
+    const week = b("cal:week", "this week (Mon–Fri)");
+    const free = b("cal:free", <>all {c.attendees.length} attendees are free</>);
+    const hours = b("cal:hours", "within everyone's working hours");
+    const length = b(null, <>{c.durationMin} minutes</>);
+    const slot = b("cal:slot", "starts on the hour or half hour");
+    if (brief)
+      return (
+        <p className="task-brief">
+          {week}
+          {free}
+          {hours}
+          {length}
+          {slot}
+        </p>
+      );
     return (
       <p>
-        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time {b("cal:week", "this week (Mon–Fri)")} when{" "}
-        {b("cal:free", <>all {c.attendees.length} attendees are free</>)} and {b("cal:hours", "within everyone's working hours")}. It lasts{" "}
-        {b(null, <>{c.durationMin} minutes</>)} and {b("cal:slot", "starts on the hour or half hour")}. Then save.
+        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time {week} when {free} and {hours}. It lasts {length} and {slot}. Then save.
       </p>
     );
   }
   const sh = ch.sheet;
+  const dups = b("sheet:dups", colList(sh.dupColumns));
+  const keep = b("sheet:keep", sh.keepRule.label);
+  const sort = b("sheet:sort", sortLabel(sh.sort));
+  if (brief)
+    return (
+      <p className="task-brief">
+        <span>Duplicates by {dups}</span>
+        <span>keep {keep}</span>
+        <span>sort by {sort}</span>
+      </p>
+    );
   return (
     <p>
-      Rows are duplicates when their {b("sheet:dups", colList(sh.dupColumns))} {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter
-      case). From each duplicate group keep only the {b("sheet:keep", sh.keepRule.label)} row. Then sort the remaining rows by{" "}
-      {b("sheet:sort", sortLabel(sh.sort))} and submit the sheet.
+      Rows are duplicates when their {dups} {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter case). From each duplicate group keep only
+      the {keep} row. Then sort the remaining rows by {sort} and submit the sheet.
     </p>
   );
 }
@@ -79,10 +115,30 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const rejection = run.rejection?.s === stage.id ? run.rejection : null;
   const note = rejection && !rejection.edited ? rejection : null;
 
+  // On small screens the header shrinks to the conditions alone once you scroll into the app (CSS
+  // applies it only there). It collapses only after scrolling past its own height and expands again
+  // only back at the top, so the change in its height can't flip it back and forth.
+  const head = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  const [peek, setPeek] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 4) {
+        setCompact(false);
+        setPeek(false);
+      } else if (head.current && !head.current.classList.contains("compact") && y > head.current.offsetHeight) setCompact(true);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useEffect(() => setPeek(false), [stage.id]);
+
   return (
     <div className="game">
       {/* The HUD and the task stay pinned together so the instructions are always in view. */}
-      <div className="game-head">
+      <div className={`game-head ${compact ? "compact" : ""} ${peek ? "peek" : ""}`} ref={head}>
         <header className="hud">
           <div className="hud-left">
             {left ??
@@ -152,8 +208,12 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
                   {ghost && <SplitGap run={run} ghost={ghost} stage={recentClear.s} />}
                 </span>
               )}
+              <button className="task-toggle" aria-expanded={peek} onClick={() => setPeek(!peek)}>
+                {peek ? "Less" : "Full task"}
+              </button>
             </div>
             <TaskText ch={ch} stage={stage.id} failed={rejection?.reqs} />
+            <TaskText ch={ch} stage={stage.id} failed={rejection?.reqs} brief />
           </section>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { SHEET_COLUMNS, type SheetChallenge } from "../challenge/types";
+import { SHEET_COLUMNS, type SheetChallenge, type SheetColumn } from "../challenge/types";
 import type { SheetAction, SheetState } from "../game/state";
 import type { Rejection } from "../game/run";
 import { RejectionNote } from "../components/RejectionNote";
@@ -13,6 +13,11 @@ type Props = {
 };
 
 const LETTERS = "ABCDEFG";
+
+/** The labels the column sort buttons use, shared by the sort menu that replaces them on small screens. */
+function sortLabels(kind: (typeof SHEET_COLUMNS)[number]["kind"]): [string, string] {
+  return kind === "number" ? ["1→9", "9→1"] : kind === "date" ? ["Old→New", "New→Old"] : ["A→Z", "Z→A"];
+}
 
 export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const byId = new Map(ch.rows.map((r) => [r.id, r]));
@@ -55,6 +60,38 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
         </div>
       )}
 
+      {/* Small screens show rows as cards without a header row; these stand in for its controls. The
+          replay moves the agent's pointer here when it clicked the ones they replace (data-trace-for). */}
+      <div className="sheet-cardbar">
+        <label>
+          <input type="checkbox" data-trace-for="sheet:all" checked={allSelected} onChange={() => dispatch({ type: "toggleAll" })} />
+          Select all
+        </label>
+        <label>
+          Sort
+          <select
+            data-trace="sheet:sortmenu"
+            data-trace-for="sheet:sort:"
+            value={state.sort ? `${state.sort.column}:${state.sort.dir}` : ""}
+            onChange={(e) => {
+              const [column, dir] = e.target.value.split(":") as [SheetColumn, "asc" | "desc"];
+              dispatch({ type: "sort", column, dir });
+            }}
+          >
+            <option value="" disabled>
+              Choose…
+            </option>
+            {SHEET_COLUMNS.flatMap((c) =>
+              sortLabels(c.kind).map((label, i) => (
+                <option key={`${c.key}:${i}`} value={`${c.key}:${i ? "desc" : "asc"}`}>
+                  {c.label} {label}
+                </option>
+              )),
+            )}
+          </select>
+        </label>
+      </div>
+
       <div className="sheet-scroll" data-scroll="sheet">
         <table className="grid">
           <thead>
@@ -76,7 +113,7 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
               </th>
               {SHEET_COLUMNS.map((c) => {
                 const active = state.sort?.column === c.key ? state.sort.dir : null;
-                const [ascLabel, descLabel] = c.kind === "number" ? ["1→9", "9→1"] : c.kind === "date" ? ["Old→New", "New→Old"] : ["A→Z", "Z→A"];
+                const [ascLabel, descLabel] = sortLabels(c.kind);
                 return (
                   <th key={c.key}>
                     <div className="colhead">
@@ -124,12 +161,18 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                       <span>{i + 1}</span>
                     </label>
                   </td>
-                  <td>{r.name}</td>
-                  <td className="mono">{r.email}</td>
-                  <td>{r.company}</td>
-                  <td>{r.plan}</td>
-                  <td className="num">{r.seats}</td>
-                  <td className="mono">{r.updated}</td>
+                  <td className="c-name">{r.name}</td>
+                  <td className="c-email mono">{r.email}</td>
+                  <td className="c-company">{r.company}</td>
+                  <td className="c-plan" data-label="Plan">
+                    {r.plan}
+                  </td>
+                  <td className="c-seats num" data-label="Seats">
+                    {r.seats}
+                  </td>
+                  <td className="c-updated mono" data-label="Updated">
+                    {r.updated}
+                  </td>
                 </tr>
               );
             })}
