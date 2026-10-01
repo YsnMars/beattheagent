@@ -30,11 +30,8 @@ export async function solveCalendar(page: Page, seed: string) {
   await page.locator('[data-trace="cal:save"]').click();
 }
 
-/** Column sort buttons on wide screens; the sort menu that replaces them on small ones. */
 async function sortSheet(page: Page, column: string, dir: string) {
-  const button = page.locator(`[data-trace="sheet:sort:${column}:${dir}"]`);
-  if (await button.isVisible()) await button.click();
-  else await page.locator('[data-trace="sheet:sortmenu"]').selectOption(`${column}:${dir}`);
+  await page.locator(`[data-trace="sheet:sort:${column}:${dir}"]`).click();
 }
 
 export async function solveSheet(page: Page, seed: string) {

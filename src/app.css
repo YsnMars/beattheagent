@@ -1598,12 +1598,6 @@ button:disabled {
   font-family: var(--mono);
   font-size: 0.88rem;
 }
-.sheet-count {
-  margin-left: auto;
-  font-size: 0.85rem;
-  color: #3f6b4f;
-  font-weight: 700;
-}
 .sheet-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1620,6 +1614,7 @@ button:disabled {
   padding: 6px 11px;
   font-size: 0.86rem;
   color: #1c2230;
+  white-space: nowrap;
 }
 .tb:hover:not(:disabled) {
   background: #f3f5f9;
@@ -1656,24 +1651,79 @@ button:disabled {
   padding: 6px 10px;
   margin-bottom: 4px;
 }
+.sheet-fx {
+  display: flex;
+  border-bottom: 1px solid #e3e7ef;
+  font-size: 0.84rem;
+  line-height: 20px;
+}
+.sheet-namebox {
+  flex: none;
+  width: 72px;
+  padding: 6px 8px;
+  border-right: 1px solid #e3e7ef;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: #3d4556;
+}
+.sheet-fx-mark {
+  flex: none;
+  padding: 6px 10px;
+  border-right: 1px solid #e3e7ef;
+  color: #8a91a1;
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+.sheet-fx-value {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sheet-scroll {
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
-.sheet-cardbar {
-  display: none; /* small screens only */
+.sheet-foot {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  border-top: 1px solid #e3e7ef;
+  background: #f3f5f9;
+  font-size: 0.8rem;
 }
+.sheet-tab {
+  margin-top: -1px;
+  padding: 6px 16px;
+  background: #fff;
+  border-right: 1px solid #e3e7ef;
+  border-bottom: 3px solid #16a34a;
+  color: #15803d;
+  font-weight: 700;
+}
+.sheet-status {
+  padding: 6px 12px;
+  color: #5b6477;
+  font-variant-numeric: tabular-nums;
+}
+/* Separate borders, so the frozen columns carry theirs along as the grid scrolls under them. */
 .grid {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   font-size: 0.86rem;
   min-width: 820px;
 }
 .grid th,
 .grid td {
-  border: 1px solid #e3e7ef;
+  border-right: 1px solid #e3e7ef;
+  border-bottom: 1px solid #e3e7ef;
   padding: 5px 8px;
   text-align: left;
   white-space: nowrap;
+  background: #fff;
 }
 .grid .letters th {
   background: #f3f5f9;
@@ -1694,6 +1744,21 @@ button:disabled {
   color: #8a91a1;
   font-size: 0.78rem;
 }
+/* Row headers and names stay put while the other columns scroll sideways. */
+.grid .corner,
+.grid .rownum,
+.grid .c-name {
+  position: sticky;
+  z-index: 1;
+}
+.grid .corner,
+.grid .rownum {
+  left: 0;
+  box-shadow: -2px 0 0 #f3f5f9; /* covers the sliver a fractional offset leaves at the edge */
+}
+.grid .c-name {
+  left: 58px;
+}
 .grid .rownum label {
   display: flex;
   gap: 6px;
@@ -1707,6 +1772,11 @@ button:disabled {
 }
 .grid tbody tr.sel td {
   background: #e7f0ff;
+}
+.grid tbody tr.sel .rownum {
+  background: #c9dcff;
+  color: #1d4ed8;
+  font-weight: 700;
 }
 .grid .num {
   text-align: right;
@@ -1734,6 +1804,9 @@ button:disabled {
   font-size: 0.6rem;
   padding: 2px 5px;
   line-height: 1.2;
+}
+.grid tr > :last-child {
+  border-right: 0;
 }
 .sortbtns button.on {
   background: #16a34a;
@@ -2279,9 +2352,6 @@ button:disabled {
   .shop-results-bar {
     flex-wrap: wrap;
   }
-  .sheet-toolbar .tb-grow {
-    display: none;
-  }
 
   /* Shopping: shorter product art, and the cart pinned to the bottom once it has something in it. */
   .product {
@@ -2365,98 +2435,93 @@ button:disabled {
     text-align: center;
   }
 
-  /* Spreadsheet: each row becomes a card, so every column shows without scrolling sideways. */
-  .sheet-cardbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+  /* Spreadsheet: still a grid, scrolling sideways under the frozen row numbers and names, with one
+     row of tools and submitting pinned to the bottom. */
+  .app-sheet {
+    margin-bottom: 64px;
+  }
+  .sheet-top {
+    gap: 10px;
     padding: 8px 12px;
-    border-bottom: 1px solid #e3e7ef;
-    background: #f8fafc;
-    font-size: 0.86rem;
   }
-  .sheet-cardbar label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .sheet-logo {
+    font-size: 1rem;
   }
-  .sheet-cardbar select {
-    width: auto;
-    font-size: 0.86rem;
+  .sheet-file {
+    font-size: 0.8rem;
   }
-  .grid {
-    display: block;
-    min-width: 0;
+  .sheet-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 6px 8px;
   }
-  .grid thead {
+  .sheet-toolbar .tb {
+    padding: 7px 10px;
+  }
+  .tb-more,
+  .sheet-toolbar .tb-grow {
     display: none;
   }
-  .grid tbody {
-    display: block;
+  .sheet-toolbar .btn-sheet {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 25;
+    padding: 13px 20px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45);
   }
-  .grid tbody tr {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    column-gap: 10px;
-    row-gap: 1px;
-    position: relative;
-    padding: 8px 12px 8px 48px;
-    border-bottom: 1px solid #e3e7ef;
+  .sheet-namebox {
+    width: 56px;
   }
-  .grid tbody tr.sel {
-    background: #e7f0ff;
+  .grid {
+    width: max-content;
+    min-width: 100%;
+    font-size: 0.84rem;
   }
-  .grid tbody td {
-    display: block;
-    min-width: 0;
-    padding: 0;
-    border: 0;
-    background: none;
+  .grid th,
+  .grid td {
+    padding: 8px;
+  }
+  .grid .corner,
+  .grid .rownum {
+    width: 50px;
+    min-width: 50px;
+    padding: 0 6px;
+  }
+  .grid .rownum label {
+    gap: 4px;
+    min-height: 34px;
+  }
+  .grid .c-name {
+    left: 50px;
+    box-shadow: 4px 0 6px -4px rgba(15, 18, 26, 0.18);
+    max-width: 118px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* The row carries the selection and hover colors; its cells stay clear. */
-  .grid tbody tr.sel td,
-  .grid tbody tr:hover td {
-    background: none;
+  .grid td.c-name {
+    font-weight: 600;
   }
-  .grid tbody td.rownum {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 44px;
-    padding: 9px 0 0 12px;
+  .grid td.c-company {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .grid .rownum label {
-    flex-direction: column;
-    gap: 2px;
+  .grid .names th {
+    padding: 6px 6px 6px 8px;
   }
-  .grid .c-name {
-    order: 1;
-    flex: 1 1 0;
-    font-weight: 650;
+  .sortbtns {
+    gap: 4px;
   }
-  .grid .c-company {
-    order: 2;
-    max-width: 55%;
-  }
-  .grid .c-email {
-    order: 3;
-    flex: 1 1 100%;
-  }
-  .grid .c-plan,
-  .grid .c-seats,
-  .grid .c-updated {
-    order: 4;
-    font-size: 0.8rem;
-    text-align: left;
-  }
-  .grid td[data-label]::before {
-    content: attr(data-label) " ";
-    font-family: var(--font);
-    color: #8a91a1;
+  .sortbtns button {
+    min-width: 26px;
+    min-height: 26px;
+    padding: 0;
+    font-size: 0.62rem;
   }
 
   /* In a replay, the pinned bars sit above the playback controls. */
@@ -2465,6 +2530,9 @@ button:disabled {
   }
   .replay .cal-savebar {
     bottom: calc(55px + env(safe-area-inset-bottom));
+  }
+  .replay .sheet-toolbar .btn-sheet {
+    bottom: calc(66px + env(safe-area-inset-bottom));
   }
 }
 @container game (max-width: 600px) {

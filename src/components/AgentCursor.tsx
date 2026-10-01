@@ -60,15 +60,7 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
     let scrolledFor = -1;
 
     const shown = (el: HTMLElement | null | undefined) => (el && el.getClientRects().length ? el : null);
-    // A narrow layout may hide the control the agent clicked and offer another in its place (the sheet's
-    // sort menu for its column sort buttons); that one names what it stands in for with `data-trace-for`.
-    const find = (tgt: string) => {
-      const { scope } = props.current;
-      return (
-        shown(document.querySelector<HTMLElement>(`${scope} [data-trace="${CSS.escape(tgt)}"]`)) ??
-        shown([...document.querySelectorAll<HTMLElement>(`${scope} [data-trace-for]`)].find((el) => tgt.startsWith(el.dataset.traceFor!) && shown(el)))
-      );
-    };
+    const find = (tgt: string) => shown(document.querySelector<HTMLElement>(`${props.current.scope} [data-trace="${CSS.escape(tgt)}"]`));
     const floorY = () => (props.current.floor && document.querySelector(props.current.floor)?.getBoundingClientRect().top) || window.innerHeight;
     const headY = () =>
       (

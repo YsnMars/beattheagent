@@ -1,4 +1,4 @@
-import { SHEET_COLUMNS, type SheetChallenge, type SheetColumn } from "../challenge/types";
+import { SHEET_COLUMNS, type SheetChallenge } from "../challenge/types";
 import type { SheetAction, SheetState } from "../game/state";
 import type { Rejection } from "../game/run";
 import { RejectionNote } from "../components/RejectionNote";
@@ -14,7 +14,7 @@ type Props = {
 
 const LETTERS = "ABCDEFG";
 
-/** The labels the column sort buttons use, shared by the sort menu that replaces them on small screens. */
+/** How a column's sort buttons describe each direction. */
 function sortLabels(kind: (typeof SHEET_COLUMNS)[number]["kind"]): [string, string] {
   return kind === "number" ? ["1→9", "9→1"] : kind === "date" ? ["Old→New", "New→Old"] : ["A→Z", "Z→A"];
 }
@@ -23,6 +23,9 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const byId = new Map(ch.rows.map((r) => [r.id, r]));
   const rows = state.rows.map((id) => byId.get(id)!);
   const allSelected = state.selected.length > 0 && state.selected.length === rows.length;
+  const lastId = state.selected.at(-1);
+  const activeIdx = lastId ? state.rows.indexOf(lastId) : -1;
+  const active = activeIdx >= 0 ? { n: activeIdx + 1, row: rows[activeIdx] } : null;
 
   return (
     <div className="sheet">
@@ -31,12 +34,12 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
           <span className="sheet-logo-mark">▦</span> Gridly
         </div>
         <div className="sheet-file">customers.csv</div>
-        <div className="sheet-count">{rows.length} rows</div>
       </div>
 
       <div className="sheet-toolbar">
         <button className="tb" data-trace="sheet:delete" onClick={() => dispatch({ type: "delete" })} disabled={!state.selected.length}>
-          🗑 Delete selected{state.selected.length ? ` (${state.selected.length})` : ""}
+          🗑 Delete<span className="tb-more"> selected</span>
+          {state.selected.length ? ` (${state.selected.length})` : ""}
         </button>
         <button className="tb" data-trace="sheet:dedupe" onClick={() => dispatch({ type: "dedupeOpen", open: true })}>
           ⧉ Remove duplicates…
@@ -60,36 +63,13 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
         </div>
       )}
 
-      {/* Small screens show rows as cards without a header row; these stand in for its controls. The
-          replay moves the agent's pointer here when it clicked the ones they replace (data-trace-for). */}
-      <div className="sheet-cardbar">
-        <label>
-          <input type="checkbox" data-trace-for="sheet:all" checked={allSelected} onChange={() => dispatch({ type: "toggleAll" })} />
-          Select all
-        </label>
-        <label>
-          Sort
-          <select
-            data-trace="sheet:sortmenu"
-            data-trace-for="sheet:sort:"
-            value={state.sort ? `${state.sort.column}:${state.sort.dir}` : ""}
-            onChange={(e) => {
-              const [column, dir] = e.target.value.split(":") as [SheetColumn, "asc" | "desc"];
-              dispatch({ type: "sort", column, dir });
-            }}
-          >
-            <option value="" disabled>
-              Choose…
-            </option>
-            {SHEET_COLUMNS.flatMap((c) =>
-              sortLabels(c.kind).map((label, i) => (
-                <option key={`${c.key}:${i}`} value={`${c.key}:${i ? "desc" : "asc"}`}>
-                  {c.label} {label}
-                </option>
-              )),
-            )}
-          </select>
-        </label>
+      {/* The formula bar reads out the row tapped last: on a phone, the columns scrolled out of view. */}
+      <div className="sheet-fx">
+        <span className="sheet-namebox">{active ? `${active.n}:${active.n}` : ""}</span>
+        <span className="sheet-fx-mark">fx</span>
+        <span className={`sheet-fx-value${active ? "" : " muted"}`}>
+          {active ? SHEET_COLUMNS.map((c) => active.row[c.key]).join("  ·  ") : "Select a row to read it here"}
+        </span>
       </div>
 
       <div className="sheet-scroll" data-scroll="sheet">
@@ -98,7 +78,9 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
             <tr className="letters">
               <th className="corner" />
               {SHEET_COLUMNS.map((c, i) => (
-                <th key={c.key}>{LETTERS[i]}</th>
+                <th key={c.key} className={`c-${c.key}`}>
+                  {LETTERS[i]}
+                </th>
               ))}
             </tr>
             <tr className="names">
@@ -115,7 +97,7 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                 const active = state.sort?.column === c.key ? state.sort.dir : null;
                 const [ascLabel, descLabel] = sortLabels(c.kind);
                 return (
-                  <th key={c.key}>
+                  <th key={c.key} className={`c-${c.key}`}>
                     <div className="colhead">
                       <span>{c.label}</span>
                       <span className="sortbtns">
@@ -164,20 +146,19 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                   <td className="c-name">{r.name}</td>
                   <td className="c-email mono">{r.email}</td>
                   <td className="c-company">{r.company}</td>
-                  <td className="c-plan" data-label="Plan">
-                    {r.plan}
-                  </td>
-                  <td className="c-seats num" data-label="Seats">
-                    {r.seats}
-                  </td>
-                  <td className="c-updated mono" data-label="Updated">
-                    {r.updated}
-                  </td>
+                  <td className="c-plan">{r.plan}</td>
+                  <td className="c-seats num">{r.seats}</td>
+                  <td className="c-updated mono">{r.updated}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="sheet-foot">
+        <span className="sheet-tab">customers</span>
+        <span className="sheet-status">{state.selected.length ? `Count: ${state.selected.length}` : `${rows.length} rows`}</span>
       </div>
 
       {state.dedupeOpen && (
