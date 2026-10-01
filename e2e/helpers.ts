@@ -3,6 +3,12 @@ import { generateChallenge } from "../src/challenge/generate";
 import { solveChallenge } from "../src/challenge/solve";
 import { formatDay } from "../src/lib/format";
 
+/** Through a stage's briefing and its countdown: the clock is running when this returns. */
+export async function ready(page: Page) {
+  await page.getByRole("button", { name: "Ready", exact: true }).click();
+  await expect(page.locator(".race-overlay")).toHaveCount(0);
+}
+
 /** Plays a stage the way a person would: through the visible controls only. */
 export async function solveShopping(page: Page, seed: string) {
   const ch = generateChallenge(seed);

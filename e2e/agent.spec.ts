@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { solveCalendar, solveSheet, solveShopping } from "./helpers";
+import { ready, solveCalendar, solveSheet, solveShopping } from "./helpers";
 
 // Uses whichever recorded agent runs are committed in public/runs.
 const index = JSON.parse(readFileSync("public/runs/index.json", "utf8")) as { runs: { seed: string; totalMs: number; modelLabel: string }[] };
@@ -12,12 +12,20 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await page.goto(`#/play/${run.seed}`);
   await expect(page.locator(".intro")).toContainText(run.modelLabel);
   await page.getByRole("button", { name: "Start", exact: true }).click();
+  // The briefing says how long the agent took on this stage.
+  await expect(page.getByRole("dialog", { name: "Shopping briefing" })).toContainText(`${run.modelLabel} did this one in`);
+  await ready(page);
   // The race status says who's ahead, not just where the agent is.
   await expect(page.locator(".ghost")).toHaveText(/^(Agent (\d stages? ahead|also on \w+|finished · \d:\d\d\.\d)|You're \d stages? ahead)$/);
+  // Both lanes are on the track, and the agent's cursor races you on your own page.
+  await expect(page.getByTestId("race").locator(".lane")).toHaveCount(2);
+  await expect(page.locator(".ghost-race .ghost-tag")).toContainText(run.modelLabel);
   await solveShopping(page, run.seed);
-  // Clearing a stage shows your gap to the agent at that point.
-  await expect(page.locator(".task-cleared")).toContainText(/(behind|ahead of|level with) the agent/);
+  // Clearing a stage shows your gap to the agent at that point, on the next briefing.
+  await expect(page.getByTestId("brief-cleared")).toContainText(/(behind|ahead of|level with) the agent/);
+  await ready(page);
   await solveCalendar(page, run.seed);
+  await ready(page);
   await solveSheet(page, run.seed);
   // The headline is the result; both sides show a time; the agent's API cost is listed.
   await expect(page.getByTestId("takeaway")).toContainText(/agent/);
@@ -31,7 +39,9 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
 test("giving up shows where you stopped, next to the agent's full run", async ({ page }) => {
   await page.goto(`#/play/${run.seed}`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
+  await ready(page);
   await solveShopping(page, run.seed);
+  await ready(page);
   await expect(page.locator('.stage-track [aria-current="step"]', { hasText: "Calendar" })).toBeVisible();
   await page.locator('[data-trace="hud:giveup"]').click();
   await page.getByRole("dialog", { name: "Give up this run?" }).getByRole("button", { name: "Give up" }).click();

@@ -562,6 +562,233 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+/* ------------------------------------------------------------------ race */
+/* You and the agent, one lane each, across the three stages. */
+.race {
+  flex: 1;
+  max-width: 380px;
+  display: grid;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.lane {
+  display: grid;
+  grid-template-columns: 3.6em 1fr;
+  align-items: center;
+}
+.lane-label {
+  color: var(--muted);
+}
+.lane-agent .lane-label {
+  color: var(--accent);
+}
+.lane-track {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.lane-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 2px;
+  background: var(--text);
+  transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lane-agent .lane-fill {
+  background: var(--accent);
+  transition: none; /* moves with the clock */
+}
+.lane-tick {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 8px;
+  margin-left: -1px;
+  background: var(--bg);
+}
+.lane-mark {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg);
+  transition: left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.lane-agent .lane-mark {
+  background: var(--accent);
+  transition: none;
+}
+/* You're somewhere inside the current stage: the marker breathes rather than pretending to know where. */
+.lane-you:not(.done) .lane-mark {
+  animation: lane-pulse 1.4s ease-in-out infinite alternate;
+}
+@keyframes lane-pulse {
+  to {
+    box-shadow: 0 0 0 5px rgba(127, 127, 127, 0.25);
+  }
+}
+.lane.done .lane-mark {
+  background: var(--ok);
+}
+
+/* Briefings, the countdown and "Go!" sit over the stage's app. */
+.race-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.brief {
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+}
+.brief-card {
+  width: min(560px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: brief-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes brief-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.brief-cleared {
+  margin: 0;
+  color: var(--ok);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.brief-kicker {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.brief-title {
+  margin: -10px 0 0;
+  font-size: 1.6rem;
+}
+.brief-task.task {
+  padding: 0;
+  margin: 0;
+}
+.brief-agent,
+.brief-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.brief-note {
+  font-size: 0.8rem;
+  text-align: center;
+}
+.brief-go {
+  align-self: stretch;
+}
+.counting {
+  background: rgba(0, 0, 0, 0.08);
+}
+.go {
+  pointer-events: none;
+}
+.count-n {
+  font-size: clamp(5rem, 18vw, 9rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text);
+  -webkit-text-stroke: 6px var(--bg);
+  paint-order: stroke fill;
+  animation: count-pop 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.go .count-n {
+  color: var(--ok);
+  animation: go-out 0.7s ease-out both;
+}
+@keyframes count-pop {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  25%,
+  75% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@keyframes go-out {
+  from {
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .count-n,
+  .go .count-n,
+  .brief-card,
+  .lane-you:not(.done) .lane-mark {
+    animation: none;
+  }
+}
+
+/* The agent's cursor racing on your page: in its own colour, a little see-through, out of your way. */
+.ghost-race .agent-cursor {
+  opacity: 0.85;
+  transition: opacity 0.3s;
+}
+.ghost-race .agent-cursor path {
+  fill: var(--accent);
+}
+.ghost-race .agent-cursor.edge {
+  opacity: 0.4;
+}
+/* Waiting at the edge of the screen: point to where it's working. */
+.agent-bubble[data-edge="down"] .ghost-tag::after {
+  content: " ↓";
+}
+.agent-bubble[data-edge="up"] .ghost-tag::after {
+  content: " ↑";
+}
+.ghost-race .agent-ripple {
+  border-color: var(--accent);
+}
+.ghost-tag {
+  display: block;
+  white-space: nowrap;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  opacity: 0.9;
+}
+.ghost-race.lap-done > * {
+  animation: fade 0.4s 2.1s reverse forwards;
+}
+
 /* ------------------------------------------------------------------ finish */
 .finish {
   position: fixed;
@@ -2168,5 +2395,18 @@ button:disabled {
   }
   .replay .cal-savebar {
     bottom: calc(55px + env(safe-area-inset-bottom));
+  }
+}
+@container game (max-width: 600px) {
+  .hud {
+    flex-wrap: wrap;
+  }
+  /* The race takes its own row under the timer. */
+  .race {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+    gap: 3px;
+    padding-bottom: 4px;
   }
 }

@@ -7,6 +7,7 @@ import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/stat
 import type { RunSummary } from "../game/agentRuns";
 import { Brand } from "./Intro";
 import { gap } from "./Outcome";
+import { RaceTrack } from "./Race";
 import { Shopping } from "../stages/Shopping";
 import { Calendar, clashFor } from "../stages/Calendar";
 import { Sheet } from "../stages/Sheet";
@@ -109,7 +110,9 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const act = onAct ?? noop;
   const submit = onSubmit ?? noop;
   const fb = run.feedback && run.feedback.s === stage.id ? run.feedback : null;
+  // Runs with briefings say this on the next stage's briefing instead.
   const recentClear =
+    !run.briefed &&
     run.feedback?.ok && run.stageIndex > 0 && run.feedback.s === STAGES[run.stageIndex - 1].id && now - run.feedback.at < 4000 ? run.feedback : null;
   const recentPenalty = fb && !fb.ok && now - fb.at < 1600;
   const rejection = run.rejection?.s === stage.id ? run.rejection : null;
@@ -166,6 +169,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
                 <Brand />
               ))}
           </div>
+          {ghost && <RaceTrack run={run} ghost={ghost} elapsed={elapsed} />}
           <div className="hud-right">
             {ghost && <Ghost ghost={ghost} elapsed={elapsed} youCleared={run.splits.length} />}
             <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
@@ -325,7 +329,7 @@ function Ghost({ ghost, elapsed, youCleared }: { ghost: RunSummary; elapsed: num
 }
 
 /** Your gap to the agent when you cleared a stage, like a split time in a race. */
-function SplitGap({ run, ghost, stage }: { run: DerivedRun; ghost: RunSummary; stage: StageId }) {
+export function SplitGap({ run, ghost, stage }: { run: DerivedRun; ghost: RunSummary; stage: StageId }) {
   const i = STAGES.findIndex((s) => s.id === stage);
   const yours = run.splits[i];
   const theirs = ghost.splits[i];

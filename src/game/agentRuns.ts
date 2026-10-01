@@ -61,11 +61,13 @@ export function useAgentSummary(seed: string): RunSummary | null | undefined {
   return index.runs.find((r) => r.seed === seed) ?? null;
 }
 
-export function useAgentRun(seed: string): AgentRun | null | undefined {
+/** The full recorded run (`null` seed: none wanted). */
+export function useAgentRun(seed: string | null): AgentRun | null | undefined {
   const [run, setRun] = useState<AgentRun | null | undefined>(undefined);
   useEffect(() => {
     let live = true;
     setRun(undefined);
+    if (seed === null) return;
     fetch(`runs/${encodeURIComponent(seed)}/run.json`, { cache: "no-cache" })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)

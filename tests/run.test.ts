@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateChallenge } from "../src/challenge/generate";
 import { solveChallenge } from "../src/challenge/solve";
-import { deriveRun, judge, PENALTY_MS, toResult, type RunEvent } from "../src/game/run";
+import { deriveRun, elapsedAt, judge, PENALTY_MS, toResult, type RunEvent } from "../src/game/run";
 import { applyAction, initialStates } from "../src/game/state";
 import type { StageId } from "../src/challenge/types";
 
@@ -92,5 +92,39 @@ describe("run log", () => {
     expect(r.stagesCleared).toBe(3);
     expect(r.penalties).toBe(1);
     expect(r.totalMs).toBe(r.splits[2]);
+  });
+
+  it("stops the clock for each briefing in runs that have them", () => {
+    // The same play, with a 10s briefing after each cleared stage (and one stray action during it).
+    const base = play();
+    const events: RunEvent[] = [];
+    let shift = 0;
+    for (const e of base) {
+      const moved = { ...e, at: e.at + shift } as RunEvent;
+      events.push(moved.k === "start" ? { ...moved, brief: true } : moved);
+      if (e.k === "submit" && e.ok && e.s !== "sheet") {
+        events.push({ k: "act", at: moved.at + 100, s: "calendar", a: { type: "pick", dayIndex: 0, startMin: 0 } });
+        events.push({ k: "go", at: moved.at + 10_000 });
+        shift += 10_000;
+      }
+    }
+    const plain = deriveRun(ch, base);
+    const briefed = deriveRun(ch, events);
+    expect(briefed.finishedAt).not.toBeNull();
+    expect(briefed.splits).toEqual(plain.splits);
+    expect(briefed.pausedMs).toBe(20_000);
+    expect(toResult(briefed).totalMs).toBe(toResult(plain).totalMs);
+
+    // Mid-briefing: the clock holds at the split, actions are ignored, and the stage hasn't begun.
+    const cleared = events.find((e) => e.k === "submit" && e.ok)!.at;
+    const mid = deriveRun(ch, events, cleared + 5_000);
+    expect(mid.pausedSince).toBe(cleared);
+    expect(mid.states.calendar.pick).toBeNull();
+    expect(elapsedAt(mid, cleared + 5_000)).toBe(mid.splits[0]);
+    expect(deriveRun(ch, events, cleared + 10_000).stageFrom).toBe(cleared + 10_000);
+
+    // Without the flag (agent recordings), a stage starts the moment the previous one is cleared.
+    expect(plain.pausedSince).toBeNull();
+    expect(deriveRun(ch, base, base.find((e) => e.k === "submit" && e.ok)!.at).stageFrom).toBe(base.find((e) => e.k === "submit" && e.ok)!.at);
   });
 });

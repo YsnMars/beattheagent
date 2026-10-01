@@ -111,15 +111,24 @@ export function useRun(ch: Challenge, rec: string | null) {
     };
   }, [rec, push, flush]);
 
-  const start = useCallback(() => {
-    if (runRef.current.startedAt === null) push({ k: "start", at: Date.now() }, true);
+  /** `brief`: stop the clock between stages for the next stage's briefing. */
+  const start = useCallback(
+    (brief = false) => {
+      if (runRef.current.startedAt === null) push(brief ? { k: "start", at: Date.now(), brief: true } : { k: "start", at: Date.now() }, true);
+    },
+    [push],
+  );
+
+  /** Ends the briefing that's showing and restarts the clock. */
+  const go = useCallback(() => {
+    if (runRef.current.pausedSince !== null) push({ k: "go", at: Date.now() }, true);
   }, [push]);
 
   const act = useCallback((s: StageId, a: AnyAction) => push({ k: "act", at: Date.now(), s, a }), [push]);
 
   const submit = useCallback(() => {
     const r = runRef.current;
-    if (r.startedAt === null || r.finishedAt !== null || r.gaveUpAt !== null) return;
+    if (r.startedAt === null || r.finishedAt !== null || r.gaveUpAt !== null || r.pausedSince !== null) return;
     const stage = STAGES[r.stageIndex].id;
     const verdict = judge(ch, stage, r.states);
     push({ k: "submit", at: Date.now(), s: stage, ok: verdict.ok, msg: verdict.message }, true);
@@ -127,7 +136,7 @@ export function useRun(ch: Challenge, rec: string | null) {
 
   const giveUp = useCallback(() => push({ k: "giveup", at: Date.now() }, true), [push]);
 
-  return { events, run, start, act, submit, giveUp };
+  return { events, run, start, go, act, submit, giveUp };
 }
 
 export function useNow(active: boolean, intervalMs = 100): number {
