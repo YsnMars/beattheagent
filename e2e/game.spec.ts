@@ -49,8 +49,8 @@ test("full run: three validated stages, each its own race, then a fresh challeng
   const note = page.locator(".inline-error");
   await expect(note).toContainText("doesn't qualify");
   await expect(note).toContainText("+15s");
-  // The broken conditions are marked in the task text.
-  await expect(page.locator(".task p b.failed").first()).toBeVisible();
+  // The broken conditions are marked in the task text (the full sentence, or the collapsed header's chips).
+  await expect(page.locator(".task p b.failed:visible").first()).toBeVisible();
   await expect(page.locator(".timer-pen")).toHaveText("+15s");
   await page.locator(`[data-trace="shop:remove:${wrong.id}"]`).click();
   await page.locator('[data-trace="shop:cart-close"]').click();
@@ -60,7 +60,8 @@ test("full run: three validated stages, each its own race, then a fresh challeng
   // The clock stays stopped through the next briefing. Each stage is a race on its own clock (the next
   // one hasn't started), with the total so far beside it on wide screens.
   const calBrief = page.getByRole("dialog", { name: "Calendar briefing" });
-  await expect(calBrief).toContainText("✓ Shopping in");
+  await expect(calBrief.getByTestId("brief-cleared")).toContainText("Shopping");
+  await expect(calBrief.locator(".brief-verdict")).toHaveText(/^Cleared in \d+\.\ds$/);
   await expect(page.getByTestId("timer")).toHaveText("0:00.0");
   const total = isMobile ? null : await page.getByTestId("total").textContent();
   await page.waitForTimeout(600);

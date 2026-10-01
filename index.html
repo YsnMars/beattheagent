@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f5f5f6" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1c1d21" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f1ec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0b10" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Beat the Agent" />
     <title>Beat the Agent — can you out-click an AI?</title>
     <meta name="description" content="An AI agent did three everyday browser tasks in under 30 seconds. Can you beat it? Same tasks, same page, one clock." />
     <link rel="canonical" href="https://beattheagent.ysnmars.com/" />
@@ -25,6 +28,10 @@
     <meta name="twitter:image" content="https://beattheagent.ysnmars.com/og.png" />
     <meta name="twitter:image:alt" content="Beat the Agent: an AI agent did three everyday tasks in under 30 seconds. Can you do them faster?" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- The display face: preloaded so the landing page's headline doesn't reflow when it arrives. -->
+    <link rel="preload" href="/node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div id="root"></div>

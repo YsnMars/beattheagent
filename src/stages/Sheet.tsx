@@ -2,6 +2,7 @@ import { SHEET_COLUMNS, type SheetChallenge } from "../challenge/types";
 import type { SheetAction, SheetState } from "../game/state";
 import type { Rejection } from "../game/run";
 import { RejectionNote } from "../components/RejectionNote";
+import { IconDedupe, IconGrid, IconReset, IconSortDown, IconSortUp, IconTrash, IconUndo } from "../components/Icons";
 
 type Props = {
   ch: SheetChallenge;
@@ -19,6 +20,11 @@ function sortLabels(kind: (typeof SHEET_COLUMNS)[number]["kind"]): [string, stri
   return kind === "number" ? ["1→9", "9→1"] : kind === "date" ? ["Old→New", "New→Old"] : ["A→Z", "Z→A"];
 }
 
+/**
+ * Gridly. Still a spreadsheet on a phone (the task is to use one): the grid scrolls sideways under
+ * frozen row numbers and names, the formula bar reads out the row tapped last, the tools scroll in one
+ * row, and Submit is docked at the bottom.
+ */
 export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const byId = new Map(ch.rows.map((r) => [r.id, r]));
   const rows = state.rows.map((id) => byId.get(id)!);
@@ -28,51 +34,64 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
   const active = activeIdx >= 0 ? { n: activeIdx + 1, row: rows[activeIdx] } : null;
 
   return (
-    <div className="sheet">
-      <div className="sheet-top">
-        <div className="sheet-logo">
-          <span className="sheet-logo-mark">▦</span> Gridly
+    <div className="gridly">
+      <header className="gl-top">
+        <div className="gl-brand">
+          <span className="gl-logo" aria-hidden>
+            <IconGrid size={16} strokeWidth={2.4} />
+          </span>
+          Gridly
         </div>
-        <div className="sheet-file">customers.csv</div>
-      </div>
+        <div className="gl-file">customers.csv</div>
+      </header>
 
-      <div className="sheet-toolbar">
-        <button className="tb" data-trace="sheet:delete" onClick={() => dispatch({ type: "delete" })} disabled={!state.selected.length}>
-          🗑 Delete<span className="tb-more"> selected</span>
-          {state.selected.length ? ` (${state.selected.length})` : ""}
+      <div className="gl-toolbar">
+        <button className="gl-tb" data-trace="sheet:delete" onClick={() => dispatch({ type: "delete" })} disabled={!state.selected.length}>
+          <IconTrash size={17} />
+          <span>
+            Delete<span className="gl-tb-more"> selected</span>
+          </span>
+          {state.selected.length ? <span className="gl-tb-n">{state.selected.length}</span> : null}
         </button>
-        <button className="tb" data-trace="sheet:dedupe" onClick={() => dispatch({ type: "dedupeOpen", open: true })}>
-          ⧉ Remove duplicates…
+        <button className="gl-tb" data-trace="sheet:dedupe" onClick={() => dispatch({ type: "dedupeOpen", open: true })}>
+          <IconDedupe size={17} />
+          Remove duplicates…
         </button>
-        <span className="tb-sep" />
-        <button className="tb" data-trace="sheet:undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.history.length}>
-          ↶ Undo
+        <span className="gl-tb-sep" />
+        <button className="gl-tb" data-trace="sheet:undo" onClick={() => dispatch({ type: "undo" })} disabled={!state.history.length}>
+          <IconUndo size={17} />
+          Undo
         </button>
-        <button className="tb" data-trace="sheet:reset" onClick={() => dispatch({ type: "reset" })}>
+        <button className="gl-tb" data-trace="sheet:reset" onClick={() => dispatch({ type: "reset" })}>
+          <IconReset size={17} />
           Reset
         </button>
-        <span className="tb-grow" />
-        <button className="btn-sheet" data-trace="sheet:submit" onClick={onSubmit}>
+        <span className="gl-tb-grow" />
+        <button className="gl-submit dock" data-trace="sheet:submit" onClick={onSubmit}>
           Submit sheet
         </button>
       </div>
       {(state.toast || rejection) && (
-        <div className="sheet-msgs">
-          {state.toast && <div className="sheet-toast">{state.toast}</div>}
+        <div className="gl-msgs">
+          {state.toast && (
+            <div className="gl-toast" key={state.toast + state.history.length} role="status">
+              {state.toast}
+            </div>
+          )}
           {rejection && <RejectionNote rejection={rejection} />}
         </div>
       )}
 
       {/* The formula bar reads out the row tapped last: on a phone, the columns scrolled out of view. */}
-      <div className="sheet-fx">
-        <span className="sheet-namebox">{active ? `${active.n}:${active.n}` : ""}</span>
-        <span className="sheet-fx-mark">fx</span>
-        <span className={`sheet-fx-value${active ? "" : " muted"}`}>
+      <div className="gl-fx">
+        <span className="gl-namebox">{active ? `${active.n}:${active.n}` : ""}</span>
+        <span className="gl-fx-mark">fx</span>
+        <span className={`gl-fx-value${active ? "" : " gl-muted"}`}>
           {active ? SHEET_COLUMNS.map((c) => active.row[c.key]).join("  ·  ") : "Select a row to read it here"}
         </span>
       </div>
 
-      <div className="sheet-scroll" data-scroll="sheet">
+      <div className="gl-scroll" data-scroll="sheet">
         <table className="grid">
           <thead>
             <tr className="letters">
@@ -87,6 +106,7 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
               <th className="rownum">
                 <input
                   type="checkbox"
+                  className="gl-check"
                   aria-label="Select all rows"
                   data-trace="sheet:all"
                   checked={allSelected}
@@ -97,7 +117,7 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                 const active = state.sort?.column === c.key ? state.sort.dir : null;
                 const [ascLabel, descLabel] = sortLabels(c.kind);
                 return (
-                  <th key={c.key} className={`c-${c.key}`}>
+                  <th key={c.key} className={`c-${c.key} ${active ? "sorted" : ""}`}>
                     <div className="colhead">
                       <span>{c.label}</span>
                       <span className="sortbtns">
@@ -106,18 +126,20 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                           data-trace={`sheet:sort:${c.key}:asc`}
                           title={`Sort ${c.label} ${ascLabel}`}
                           aria-label={`Sort ${c.label} ${ascLabel}`}
+                          aria-pressed={active === "asc"}
                           onClick={() => dispatch({ type: "sort", column: c.key, dir: "asc" })}
                         >
-                          ▲
+                          <IconSortUp size={15} strokeWidth={2.6} />
                         </button>
                         <button
                           className={active === "desc" ? "on" : ""}
                           data-trace={`sheet:sort:${c.key}:desc`}
                           title={`Sort ${c.label} ${descLabel}`}
                           aria-label={`Sort ${c.label} ${descLabel}`}
+                          aria-pressed={active === "desc"}
                           onClick={() => dispatch({ type: "sort", column: c.key, dir: "desc" })}
                         >
-                          ▼
+                          <IconSortDown size={15} strokeWidth={2.6} />
                         </button>
                       </span>
                     </div>
@@ -135,6 +157,7 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                     <label onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
+                        className="gl-check"
                         data-trace={`sheet:check:${r.id}`}
                         checked={sel}
                         onChange={() => dispatch({ type: "toggle", id: r.id })}
@@ -156,24 +179,26 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
         </table>
       </div>
 
-      <div className="sheet-foot">
-        <span className="sheet-tab">customers</span>
-        <span className="sheet-status">{state.selected.length ? `Count: ${state.selected.length}` : `${rows.length} rows`}</span>
+      <div className="gl-foot">
+        <span className="gl-tab">customers</span>
+        <span className="gl-status">{state.selected.length ? `Count: ${state.selected.length}` : `${rows.length} rows`}</span>
       </div>
 
       {state.dedupeOpen && (
-        <div className="modal-scrim" onClick={() => dispatch({ type: "dedupeOpen", open: false })}>
-          <div className="modal" role="dialog" aria-label="Remove duplicates" onClick={(e) => e.stopPropagation()} data-trace="sheet:dialog">
+        <div className="gl-scrim" onClick={() => dispatch({ type: "dedupeOpen", open: false })}>
+          <div className="gl-modal" role="dialog" aria-label="Remove duplicates" onClick={(e) => e.stopPropagation()} data-trace="sheet:dialog">
+            <span className="gl-grip" aria-hidden />
             <h3>Remove duplicates</h3>
-            <p className="muted small">
+            <p className="gl-muted">
               Rows count as duplicates when <b>all</b> checked columns match. Letter case and surrounding spaces are ignored. The <b>first (top-most)</b> row of
               each group is kept; the rest are deleted.
             </p>
-            <div className="modal-cols">
+            <div className="gl-modal-cols">
               {SHEET_COLUMNS.map((c) => (
-                <label key={c.key} className="modal-col">
+                <label key={c.key} className={`gl-modal-col ${state.dedupeCols.includes(c.key) ? "on" : ""}`}>
                   <input
                     type="checkbox"
+                    className="gl-check"
                     data-trace={`sheet:dcol:${c.key}`}
                     checked={state.dedupeCols.includes(c.key)}
                     onChange={() => dispatch({ type: "dedupeCol", column: c.key })}
@@ -182,11 +207,11 @@ export function Sheet({ ch, state, dispatch, onSubmit, rejection }: Props) {
                 </label>
               ))}
             </div>
-            <div className="modal-actions">
-              <button className="tb" data-trace="sheet:dcancel" onClick={() => dispatch({ type: "dedupeOpen", open: false })}>
+            <div className="gl-modal-actions">
+              <button className="gl-btn" data-trace="sheet:dcancel" onClick={() => dispatch({ type: "dedupeOpen", open: false })}>
                 Cancel
               </button>
-              <button className="btn-sheet" data-trace="sheet:dapply" onClick={() => dispatch({ type: "dedupeApply" })}>
+              <button className="gl-btn gl-btn-primary" data-trace="sheet:dapply" onClick={() => dispatch({ type: "dedupeApply" })}>
                 Remove duplicates
               </button>
             </div>

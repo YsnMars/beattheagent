@@ -1,24 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STAGES, type Challenge } from "../challenge/types";
 import type { AgentRun, RunSummary } from "../game/agentRuns";
-import { stageElapsedAt, type DerivedRun } from "../game/run";
+import { stageElapsedAt, stageTime, type DerivedRun } from "../game/run";
 import { useNow } from "../game/useRun";
+import { formatDuration, gap } from "../lib/format";
 import { AgentCursor, buildMoves } from "./AgentCursor";
 import { TaskText } from "./GameScreen";
-import { formatDuration } from "../lib/format";
-import { gap, stageTime } from "./Outcome";
+import { STAGE_ICONS, IconArrowRight, IconCheck } from "./Icons";
+import { Lanes } from "./Lanes";
 
 const COUNT_MS = 800; // per number in the countdown
 
 /**
  * The task for the stage that's about to start, on its own before the stage's app is in play. Each
  * stage is a race of its own, like a grand prix: the card opens with the result of the last one. The
- * clock is stopped meanwhile (the agent read its instructions on the clock).
+ * clock is stopped meanwhile (the agent read its instructions on the clock). A sheet from the bottom
+ * on phones, so Ready is under the thumb.
  */
 export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: DerivedRun; ghost: RunSummary | null; onReady: () => void }) {
   const i = Math.min(run.stageIndex, STAGES.length - 1);
   const stage = STAGES[i];
   const cleared = i > 0 && run.feedback?.ok ? i - 1 : null;
+  const Icon = STAGE_ICONS[stage.id];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -33,27 +36,45 @@ export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: Deri
   }, [onReady]);
 
   return (
-    <div className="race-overlay brief" role="dialog" aria-label={`${stage.title} briefing`}>
-      <div className="brief-card">
+    <div className="race-overlay brief sheet-scrim" role="dialog" aria-label={`${stage.title} briefing`}>
+      <div className="sheet brief-card">
+        <span className="sheet-grip" aria-hidden />
         {cleared !== null && <RaceResult run={run} ghost={ghost} i={cleared} />}
-        <div className="brief-kicker">
-          Race {i + 1} of {STAGES.length}
+        <div className="brief-head">
+          <span className={`brief-icon it-${stage.id}`}>
+            <Icon size={22} />
+          </span>
+          <div>
+            <div className="eyebrow brief-kicker">
+              Race {i + 1} of {STAGES.length}
+            </div>
+            <h2 className="brief-title">{stage.title}</h2>
+          </div>
+          <ol className="brief-pips" aria-hidden>
+            {STAGES.map((s, k) => (
+              <li key={s.id} className={k < i ? "done" : k === i ? "current" : ""} />
+            ))}
+          </ol>
         </div>
-        <h2 className="brief-title">{stage.title}</h2>
         <div className="brief-task task">
           <TaskText ch={ch} stage={stage.id} />
         </div>
         <div className="brief-foot">
           <p className="brief-note">
-            {ghost && ghost.stagesCleared >= i && (
+            {ghost && ghost.stagesCleared >= i ? (
               <>
-                <span className="agent-ink">{ghost.modelLabel}</span>'s cursor races you on the page.{" "}
+                <i className="dot dot-agent" aria-hidden />
+                <span>
+                  <b className="agent-ink">{ghost.modelLabel}</b>'s cursor races you on the page.
+                </span>
               </>
+            ) : (
+              "The clock waits while you read."
             )}
-            {!ghost && "The clock waits while you read."}
           </p>
-          <button className="btn-primary brief-go" data-trace="brief:ready" onClick={onReady} autoFocus>
+          <button className="btn btn-go btn-lg brief-go" data-trace="brief:ready" onClick={onReady} autoFocus>
             Ready
+            <IconArrowRight size={20} />
             <kbd className="intro-kbd" aria-hidden>
               Enter
             </kbd>
@@ -80,26 +101,29 @@ export function Countdown({ onDone }: { onDone: () => void }) {
   return (
     <div className="race-overlay counting" role="status" aria-label="Countdown">
       {n > 0 && (
-        <span className="count-n" key={n}>
-          {n}
-        </span>
+        <div className="count" key={n}>
+          <svg className="count-ring" viewBox="0 0 100 100" aria-hidden>
+            <circle cx="50" cy="50" r="46" />
+          </svg>
+          <span className="count-n">{n}</span>
+        </div>
       )}
     </div>
   );
 }
 
-/** The "Go!" that flashes as the clock starts. */
+/** The "GO" that flashes as the clock starts. */
 export function GoFlash() {
   return (
     <div className="race-overlay go" aria-hidden>
-      <span className="count-n">Go!</span>
+      <span className="count-n">GO</span>
     </div>
   );
 }
 
 /**
  * How the race just run went, and the standings after it (both times include wrong-answer penalties):
- * the verdict as a headline, then the times as labelled stats like the HUD's scoreboard.
+ * the verdict as a headline, the two times as labelled stats, then the standings as lanes.
  */
 function RaceResult({ run, ghost, i }: { run: DerivedRun; ghost: RunSummary | null; i: number }) {
   const title = STAGES[i].title;
@@ -119,30 +143,49 @@ function RaceResult({ run, ghost, i }: { run: DerivedRun; ghost: RunSummary | nu
   const both = i > 0 && ghost && ghost.splits[i] !== undefined;
   const total = both ? by(run.splits[i] - ghost.splits[i]) : null;
   return (
-    <div className="brief-result" data-testid="brief-cleared">
-      <div className="brief-cleared">✓ {title}</div>
-      <p className={`brief-verdict lead-${lead}`}>{verdict}</p>
+    <div className={`brief-result lead-${lead}`} data-testid="brief-cleared">
+      <div className="eyebrow brief-cleared">
+        <IconCheck size={13} strokeWidth={3} />
+        {title}
+      </div>
+      <p className="brief-verdict">{verdict}</p>
       {ghost && (
-        <div className="brief-stats">
-          <div>
-            <span className="race-label">You</span>
-            <b>{formatDuration(yours)}</b>
-          </div>
-          <div>
-            <span className="race-label">{ghost.modelLabel}</span>
-            <b className="agent-ink">{theirs === null ? "—" : formatDuration(theirs)}</b>
+        <>
+          <div className="brief-stats">
+            <div className="stat stat-you">
+              <span className="stat-label">
+                <i className="dot dot-you" aria-hidden />
+                You
+              </span>
+              <b>{formatDuration(yours)}</b>
+            </div>
+            <div className="stat stat-agent">
+              <span className="stat-label">
+                <i className="dot dot-agent" aria-hidden />
+                {ghost.modelLabel}
+              </span>
+              <b>{theirs === null ? "—" : formatDuration(theirs)}</b>
+            </div>
+            {both && (
+              <div className="stat stat-standing">
+                <span className="stat-label">
+                  After {i + 1} of {STAGES.length}
+                </span>
+                <b className="brief-standing">
+                  {total === null ? "Level" : run.splits[i] < ghost.splits[i] ? `You lead by ${total}` : `Agent leads by ${total}`}
+                </b>
+              </div>
+            )}
           </div>
           {both && (
-            <div>
-              <span className="race-label">
-                After {i + 1} of {STAGES.length}
-              </span>
-              <b className="brief-standing">
-                {total === null ? "Level" : run.splits[i] < ghost.splits[i] ? `You lead by ${total}` : `Agent leads by ${total}`}
-              </b>
-            </div>
+            <Lanes
+              lanes={[
+                { who: "you", label: "You", splits: run.splits.slice(0, i + 1), totalMs: run.splits[i] },
+                { who: "agent", label: ghost.modelLabel, splits: ghost.splits.slice(0, i + 1), totalMs: ghost.splits[i] },
+              ]}
+            />
           )}
-        </div>
+        </>
       )}
     </div>
   );

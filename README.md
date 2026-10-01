@@ -27,6 +27,7 @@ The repo includes recorded agent runs in `public/runs/`. Without any runs, `#/` 
 | `npm test` | Unit tests: generator invariants on 300 seeds, validators, run-log replay, results |
 | `npm run e2e` | Playwright: full human run on desktop and mobile viewports (dealing a challenge, penalty, validation, you-vs-agent summary, replay, reload-resume, give-up) |
 | `npm run og` | Re-render the social preview card `public/og.png` (1200×630) from `scripts/render-og.ts` |
+| `npm run icons` | Re-render the home-screen icons in `public/icons/` from the brand mark |
 | `npm run agent:run -- --seeds K7M2Q` | Record a genuine agent run (costs API money; see below) |
 
 ## Web Analytics
@@ -95,7 +96,26 @@ Observed behavior: the hosted browser acts on page elements directly. Every reco
 - **Ghost race:** during play, the HUD shows where the recorded agent was at the same elapsed time.
 - **Seeds stay behind the scenes:** `#/` deals a recorded seed at random, preferring ones this browser hasn't seen, and keeps it for the tab so a reload resumes the run. The seed isn't shown anywhere. `#/play/<seed>` still opens a specific challenge; the recorder and tests use it.
 - **After a run:** you see your time next to the agent's, a one-line comparison, per-stage times, and links to watch the agent's replay or try another challenge.
-- **Mobile:** every stage adapts to phones (filter chips, single-day calendar with day tabs, horizontally scrolling sheet). The e2e suite runs the full flow on a Pixel 7 viewport.
+- **Mobile first:** see [Design](#design). The e2e suite runs the full flow on a Pixel 7 viewport as well as desktop.
+
+## Design
+
+The game's own chrome reads like a race broadcast; the three challenge apps look like someone else's sites.
+
+- **Two identities, everywhere.** The agent is violet, you are lime: the scoreboard, the lap bar, the race lanes, the cursor, the stamps on the result. Chart colors are a validated pair (colorblind-safe in both themes); text never relies on color alone (every swatch has a label).
+- **Type.** [Archivo](https://fonts.google.com/specimen/Archivo) (variable weight *and* width: the expanded heavy cut is the race-broadcast voice, and its tabular figures keep the clocks from jittering) with a line of [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) italic for the dare. Both are self-hosted via Fontsource; the display face is preloaded. The challenge apps use the system font on purpose, so they never look like the game.
+- **Phones first.** Everything is designed at 375px and grows:
+  - The landing page leads with the agent's time as one huge figure; Start is pinned under the thumb.
+  - The HUD is symmetric (exit · YOU vs AGENT · give up), with the agent's lap as a thin bar along the header's edge: it fills toward the moment the agent finished this race. Once you scroll into an app the header collapses to the task's conditions.
+  - Briefings, confirmations, and results are sheets from the bottom, with their main action in reach of the thumb. The apps' own panels (the cart, Remove duplicates) open *below* the header, so the task and the clock stay readable while you use them.
+  - Each app's main action is docked at the bottom: the cart bar, the calendar's pickers + Save, Submit sheet. SoundMarket's results are a list (price, rating and delivery side by side); Cadence shows one day at a time with pinned day tabs; Gridly stays a real spreadsheet with frozen columns.
+  - Inputs are 16px+ (no zoom-on-focus on iOS), taps have no delay, safe areas are respected (notches, the home indicator, landscape), and stage verdicts give a short haptic tap where the browser supports it.
+  - Short screens (a phone on its side) give the height to the app: Start goes back into the page and the header collapses.
+- **Wide screens** frame each app in a browser window with its own address bar, and the HUD fits on one row.
+- **Results** open with a stamp (You win / Agent wins / Dead heat / Did not finish), then the race as two lanes split by stage, with a splits table as its table view. **Share** uses the phone's share sheet (or copies the line and link), linking straight to the same challenge so a friend races the same agent run.
+- **Installable.** A web app manifest and icons make "Add to Home Screen" launch full-screen.
+
+Styles live in `src/styles/` (tokens and components in `base.css`, then the shell, the screens, and one file per challenge app in `apps/`). Layout responds to the game's own width with container queries, so the replay and the game share every breakpoint.
 
 ## Deploying
 
@@ -107,8 +127,9 @@ Observed behavior: the hosted browser acts on page elements directly. Every reco
 src/challenge/   seeded generators, validators, reference solver
 src/game/        run log + derivation, reducers, recorder hook, agent-run loaders
 src/stages/      Shopping, Calendar, Sheet apps
+src/styles/      design tokens, shell, screens, and each challenge app's styles
 src/pages/       Home (deals a challenge), Play, Replay
-scripts/         run-agent.ts (recorder), server.ts (static + trace collector)
+scripts/         run-agent.ts (recorder), server.ts (static + trace collector), render-og.ts, render-icons.ts
 tests/           vitest unit tests
 e2e/             Playwright end-to-end tests
 public/runs/     recorded agent runs (committed; served statically)

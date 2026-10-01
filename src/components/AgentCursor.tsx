@@ -253,8 +253,8 @@ export function AgentCursor({ moves, cur, speed = 1, scope, follow = false, floo
     <div className={`agent-layer ${className}`} aria-hidden>
       <div className="agent-ripple" ref={ripple} />
       <div className="agent-cursor" ref={cursor}>
-        <svg viewBox="0 0 24 24" width="22" height="22">
-          <path d="M3 2l7 19 2.5-7.5L20 11z" fill="#1d1e21" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path d="M3 2l7 19 2.5-7.5L20 11z" strokeWidth="1.6" strokeLinejoin="round" />
         </svg>
       </div>
       <div className="agent-bubble" ref={bubble}>

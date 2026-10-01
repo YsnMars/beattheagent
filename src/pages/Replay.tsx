@@ -3,10 +3,12 @@ import { generateChallenge } from "../challenge/generate";
 import { STAGES } from "../challenge/types";
 import { AgentCursor, buildMoves, StepStack, type Step } from "../components/AgentCursor";
 import { GameScreen } from "../components/GameScreen";
-import { Brand, Intro } from "../components/Intro";
+import { Brand } from "../components/Brand";
+import { IconBack, IconChevronRight, IconPause, IconPlay, IconReplay } from "../components/Icons";
+import { Intro } from "../components/Intro";
 import { useAgentRun, type AgentRun } from "../game/agentRuns";
 import { deriveRun, elapsedAt, type RunEvent } from "../game/run";
-import { formatDuration, formatUsd } from "../lib/format";
+import { formatDuration, formatInt, formatUsd } from "../lib/format";
 import { href } from "../lib/router";
 
 const SPEEDS = [1, 2, 4];
@@ -21,11 +23,12 @@ export function Replay({ seed }: { seed: string }) {
       <div className="page">
         <header className="topbar">
           <Brand />
-          <a className="btn-text" href="#/">
-            ← Back
+          <a className="btn btn-quiet" href="#/">
+            <IconBack size={18} />
+            Back
           </a>
         </header>
-        <p className="muted page-note">{run === undefined ? "Loading replay…" : "There's no recorded agent run for this challenge."}</p>
+        <p className={`page-note ${run === undefined ? "loading" : ""}`}>{run === undefined ? "Loading replay…" : "There's no recorded agent run for this challenge."}</p>
       </div>
     );
   return <ReplayPlayer run={run} />;
@@ -75,13 +78,20 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
 
   const markers = events
     .filter((e): e is Extract<RunEvent, { k: "submit" }> => e.k === "submit")
-    .map((e) => ({ at: e.at, label: e.ok ? `${STAGES.find((s) => s.id === e.s)!.title} done` : "Rejected", cls: e.ok ? "ok" : "bad" }));
+    .map((e) => {
+      const n = STAGES.findIndex((s) => s.id === e.s) + 1;
+      return { at: e.at, n, label: e.ok ? `${STAGES[n - 1].title} done` : "Rejected", cls: e.ok ? "ok" : "bad" };
+    });
   const pctOf = (at: number) => Math.max(0, ((at - t0) / (tEnd - t0)) * 100);
   const title = (
     <span className="replay-title">
-      <a className="btn-text" href="#/" aria-label="Back">
-        ←
+      <a className="replay-back" href="#/" aria-label="Back">
+        <IconBack size={20} />
       </a>
+      <span className="replay-badge">
+        <i className={`rec-dot ${playing ? "" : "paused"}`} aria-hidden />
+        Replay
+      </span>
       <h1>{run.modelLabel} replay</h1>
     </span>
   );
@@ -91,10 +101,10 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
       <div className="replay-stage">
         {derived.startedAt === null ? (
           <div className="game">
-            <Intro ch={ch} left={title} />
+            <Intro ch={ch} ghost={run} left={title} />
           </div>
         ) : (
-          <GameScreen ch={ch} run={derived} now={cur} left={title} />
+          <GameScreen ch={ch} run={derived} now={cur} left={title} clockLabel="Agent" />
         )}
       </div>
 
@@ -109,44 +119,52 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
       )}
 
       {ended && (
-        <div className="finish" role="dialog" aria-label="Replay finished">
-          <div className="finish-card">
-            <div className="finish-kicker">{derived.finishedAt ? `${run.modelLabel} finished in` : `${run.modelLabel} stopped after`}</div>
-            <div className="finish-time">{derived.finishedAt ? formatDuration(elapsedAt(derived, cur)) : `${run.stagesCleared}/3`}</div>
-            <div className="finish-sub">
-              {[
-                `${run.counts.clicks} clicks`,
-                run.penalties ? `${run.penalties} wrong answer${run.penalties > 1 ? "s" : ""}` : "no wrong answers",
-                run.cost.total !== null ? `${formatUsd(run.cost.total)} API cost` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+        <div className="finish sheet-scrim" role="dialog" aria-label="Replay finished">
+          <div className="sheet finish-card">
+            <div className="finish-body solo">
+              <div className="eyebrow finish-kicker">{derived.finishedAt ? `${run.modelLabel} finished in` : `${run.modelLabel} stopped after`}</div>
+              <div className="finish-time">{derived.finishedAt ? formatDuration(elapsedAt(derived, cur)) : `${run.stagesCleared}/3`}</div>
+              <dl className="replay-stats">
+                <div>
+                  <dt>Clicks</dt>
+                  <dd>{formatInt(run.counts.clicks)}</dd>
+                </div>
+                <div>
+                  <dt>Wrong answers</dt>
+                  <dd>{run.penalties || "None"}</dd>
+                </div>
+                <div>
+                  <dt>API cost</dt>
+                  <dd>{run.cost.total !== null ? formatUsd(run.cost.total) : "Not reported"}</dd>
+                </div>
+              </dl>
+              <Disclosure label="What the agent was told">
+                <pre>{run.prompt.instructions}</pre>
+                <pre>{run.prompt.task}</pre>
+                <p className="prompt-note">
+                  Everything else came from the page itself. The agent ran in an OpenAI-hosted browser; this replay is rebuilt from the page's log of its
+                  clicks and inputs.
+                </p>
+              </Disclosure>
             </div>
             <div className="finish-actions">
-              <button className="btn-primary" onClick={restart}>
-                Watch again
-              </button>
-              <a className="btn-ghost" href={href("/")}>
-                Back
-              </a>
+              <div className="finish-row">
+                <button className="btn btn-go btn-lg" onClick={restart}>
+                  <IconReplay size={18} />
+                  Watch again
+                </button>
+                <a className="btn btn-quiet btn-lg" href={href("/")}>
+                  Back
+                </a>
+              </div>
             </div>
-            <Disclosure label="What the agent was told">
-              <pre>{run.prompt.instructions}</pre>
-              <pre>{run.prompt.task}</pre>
-              <p className="muted small">
-                Everything else came from the page itself. The agent ran in an OpenAI-hosted browser; this replay is rebuilt from the page's log of its
-                clicks and inputs.
-              </p>
-            </Disclosure>
           </div>
         </div>
       )}
 
       <div className="replay-bar">
         <button className="play-btn" onClick={() => (atEnd ? restart() : setPlaying(!playing))} aria-label={playing ? "Pause" : "Play"} data-testid="replay-play">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden>
-            {playing ? <path d="M4 2h3v12H4zM9 2h3v12H9z" /> : <path d="M4 2l10 6-10 6z" />}
-          </svg>
+          {playing ? <IconPause size={16} /> : <IconPlay size={16} />}
         </button>
         <div
           className="scrub-track"
@@ -163,15 +181,20 @@ function ReplayPlayer({ run }: { run: AgentRun }) {
             window.addEventListener("pointerup", up);
           }}
         >
-          <div className="scrub-fill" style={{ width: `${pctOf(cur)}%` }} />
+          <div className="scrub-rail">
+            <div className="scrub-fill" style={{ width: `${pctOf(cur)}%` }} />
+          </div>
           {markers.map((m, i) => (
-            <span key={i} className={`scrub-mark ${m.cls}`} style={{ left: `${pctOf(m.at)}%` }} title={m.label} />
+            <span key={i} className={`scrub-mark ${m.cls} ${cur >= m.at ? "passed" : ""}`} style={{ left: `${pctOf(m.at)}%` }} title={m.label}>
+              {m.cls === "ok" ? m.n : "!"}
+            </span>
           ))}
+          <span className="scrub-knob" style={{ left: `${pctOf(cur)}%` }} />
         </div>
         <span className="scrub-time">{formatDuration(cur - startAt, 0)}</span>
-        <div className="speeds">
+        <div className="speeds" role="group" aria-label="Playback speed">
           {SPEEDS.map((s) => (
-            <button key={s} className={s === speed ? "on" : ""} onClick={() => setSpeed(s)}>
+            <button key={s} className={s === speed ? "on" : ""} aria-pressed={s === speed} onClick={() => setSpeed(s)}>
               {s}×
             </button>
           ))}
@@ -188,9 +211,7 @@ function Disclosure({ label, children }: { label: string; children: React.ReactN
   return (
     <div className={`prompt ${open ? "open" : ""}`}>
       <button className="prompt-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
-        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" aria-hidden>
-          <path d="M5 2l7 6-7 6z" />
-        </svg>
+        <IconChevronRight size={16} />
         {label}
       </button>
       <div className="prompt-body" id={id} inert={!open}>

@@ -1,0 +1,365 @@
+/* ==================================================================== intro
+   Phones: the agent's time as one huge figure, the dare, the course, and Start pinned under the thumb.
+   Wide screens: the hero beside the course. */
+.intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+.intro-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 45% at 100% 0%, rgba(var(--glow), 0.2), transparent 70%),
+    radial-gradient(60% 40% at 0% 100%, rgba(190, 235, 30, 0.12), transparent 70%);
+}
+/* A faint timing grid, fading out from the top. */
+.intro-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 44px 44px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(90% 60% at 70% 0%, #000 0%, transparent 75%);
+  opacity: 0.7;
+}
+.intro-best-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px 7px 9px;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.intro-best-chip svg {
+  color: var(--you);
+}
+/* No z-index here: the pinned Start button has to rise above the page's fade (.intro::after). */
+.intro-main {
+  position: relative;
+  flex: 1;
+  display: grid;
+  align-content: start;
+  gap: 28px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  /* Room under the content for the pinned Start button. */
+  padding: 6px calc(var(--gutter) + var(--safe-r)) calc(104px + var(--safe-b)) calc(var(--gutter) + var(--safe-l));
+}
+.intro-hero {
+  display: grid;
+  gap: 16px;
+}
+.intro-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.intro-eyebrow .dot-agent {
+  box-shadow: 0 0 0 4px var(--agent-soft);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.intro-title {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  font-weight: inherit;
+}
+.intro-figure {
+  font-size: clamp(96px, 30vw, 196px);
+  font-weight: 900;
+  font-stretch: 112%;
+  letter-spacing: -0.065em;
+  line-height: 0.8;
+  margin-left: -0.04em;
+  animation: figure-in 0.8s var(--ease) both;
+}
+@keyframes figure-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    letter-spacing: -0.02em;
+  }
+}
+.intro-claim {
+  max-width: 26ch;
+  font-size: 19px;
+  font-weight: 600;
+  font-stretch: 104%;
+  letter-spacing: -0.01em;
+  line-height: 1.32;
+  color: var(--text-2);
+}
+.intro-claim-lg {
+  max-width: 12ch;
+  font-size: clamp(44px, 12vw, 88px);
+  font-weight: 900;
+  font-stretch: 118%;
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+  color: var(--text);
+}
+.intro-dare {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(36px, 10vw, 60px);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+}
+.intro-sub {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--muted);
+  font-size: 15px;
+}
+.intro-sub b {
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* ------------------------------------------------------------------ the course */
+.intro-card {
+  padding: 4px 16px;
+  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+}
+.intro-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 4px;
+}
+.intro-tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.intro-tasks li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon title time"
+    "icon blurb blurb"
+    "icon bar bar";
+  column-gap: 14px;
+  padding: 16px 0;
+}
+.intro-tasks li + li,
+.intro-card-head + .intro-tasks li:first-child {
+  border-top: 1px solid var(--line);
+}
+.it-icon {
+  grid-area: icon;
+  align-self: start;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+/* Each app in its own brand colour, tinted. */
+.it-shopping {
+  background: #fff1e6;
+  color: #c2410c;
+}
+.it-calendar {
+  background: #e8efff;
+  color: #1d4ed8;
+}
+.it-sheet {
+  background: #e3f6ea;
+  color: #15803d;
+}
+@media (prefers-color-scheme: dark) {
+  .it-shopping {
+    background: rgba(249, 115, 22, 0.15);
+    color: #ffa463;
+  }
+  .it-calendar {
+    background: rgba(59, 130, 246, 0.17);
+    color: #93b8ff;
+  }
+  .it-sheet {
+    background: rgba(34, 197, 94, 0.15);
+    color: #74dd9c;
+  }
+}
+.it-n {
+  position: absolute;
+  top: 10px;
+  left: 30px;
+  padding: 1px 4px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 9.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.it-title {
+  grid-area: title;
+  font-size: 17px;
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.015em;
+}
+.it-blurb {
+  grid-area: blurb;
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.it-time {
+  grid-area: time;
+  font-size: 16px;
+  font-weight: 800;
+  font-stretch: 110%;
+  font-variant-numeric: tabular-nums;
+}
+/* The agent's lap on each task, one scale: a single series, so the card head names it, no legend. */
+.it-bar {
+  grid-area: bar;
+  width: var(--w);
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 0 4px 4px 0;
+  background: var(--agent);
+  transform-origin: left;
+  animation: lane-grow 0.9s var(--ease) 0.2s both;
+}
+.intro-tasks li:nth-child(2) .it-bar {
+  animation-delay: 0.32s;
+}
+.intro-tasks li:nth-child(3) .it-bar {
+  animation-delay: 0.44s;
+}
+.intro-best {
+  margin: -8px 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.intro-best b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ start */
+.intro-cta {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+.intro-start {
+  position: fixed;
+  left: calc(var(--gutter) + var(--safe-l));
+  right: calc(var(--gutter) + var(--safe-r));
+  bottom: calc(14px + var(--safe-b));
+  z-index: 5;
+  min-height: 60px;
+  font-size: 19px;
+  font-weight: 800;
+  font-stretch: 115%;
+  border-radius: 20px;
+}
+/* The page fades out under the pinned button. */
+.intro::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  height: calc(110px + var(--safe-b));
+  background: linear-gradient(to bottom, transparent, var(--bg) 55%);
+  pointer-events: none;
+}
+.intro-watch {
+  justify-self: start;
+  min-height: 46px;
+  font-size: 15px;
+}
+
+/* A phone on its side: Start goes back into the page, and the figure fits the height. */
+@media (max-height: 560px) and (max-width: 959px) {
+  .intro-main {
+    padding-bottom: calc(32px + var(--safe-b));
+  }
+  .intro-figure {
+    font-size: min(30vw, 34vh);
+  }
+  .intro-start {
+    position: static;
+  }
+  .intro::after {
+    content: none;
+  }
+  .intro-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+@media (min-width: 960px) {
+  .intro-main {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-content: center;
+    align-items: center;
+    column-gap: 72px;
+    padding: 24px 48px 64px;
+  }
+  .intro-hero {
+    gap: 20px;
+  }
+  .intro-claim {
+    font-size: 22px;
+  }
+  .intro-cta {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .intro-start {
+    position: static;
+    min-width: 220px;
+  }
+  .intro-watch {
+    min-height: 60px;
+    padding: 0 24px;
+    border-radius: 20px;
+  }
+  .intro::after {
+    content: none;
+  }
+  .intro-card {
+    padding: 8px 24px;
+  }
+  .intro-best {
+    grid-column: 1;
+    margin: 0;
+    text-align: left;
+  }
+  .topbar {
+    padding: 18px 48px;
+  }
+}

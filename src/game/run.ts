@@ -156,6 +156,9 @@ export function judge(ch: Challenge, stage: StageId, states: StageStates): Verdi
 
 // ---------------------------------------------------------------- results
 
+/** One stage's own time from cumulative splits, or null if that stage wasn't cleared. */
+export const stageTime = (splits: number[], i: number) => (i < splits.length ? splits[i] - (splits[i - 1] ?? 0) : null);
+
 export type RunResult = {
   stagesCleared: number;
   splits: number[];

@@ -1,0 +1,547 @@
+/* ==================================================================== Gridly
+   A green spreadsheet app. Still a grid on phones: it scrolls sideways under frozen row numbers and
+   names, the tools scroll in one row, and Submit is docked at the bottom. */
+.gridly {
+  --gl: #16a34a;
+  --gl-deep: #15803d;
+  --gl-line: #e3e7ef;
+  --gl-ink: #1c2230;
+  --gl-muted: #5b6477;
+  --gl-head: #f3f5f9;
+  padding-bottom: calc(88px + var(--safe-b));
+}
+.gl-muted {
+  color: #8a91a1;
+}
+
+/* ------------------------------------------------------------------ header + tools */
+.gl-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #ecfbf2, #f7fdf9);
+  border-bottom: 1px solid #cfeedb;
+}
+.gl-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--gl-deep);
+}
+.gl-logo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: linear-gradient(140deg, #22c55e, #15803d);
+  color: #fff;
+  box-shadow: 0 4px 10px -4px rgba(21, 128, 61, 0.7);
+}
+.gl-file {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: rgba(21, 128, 61, 0.08);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: #2f5d40;
+}
+.gl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--gl-line);
+  background: #fafbfc;
+}
+.gl-toolbar::-webkit-scrollbar {
+  display: none;
+}
+.gl-tb {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid #d6dbe4;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--gl-ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s,
+    transform 0.12s;
+}
+.gl-tb:hover:not(:disabled) {
+  background: #f3f5f9;
+}
+.gl-tb:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.gl-tb-n {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 99px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.gl-tb-more,
+.gl-tb-grow {
+  display: none;
+}
+.gl-tb-sep {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  margin: 0 2px;
+  background: #d6dbe4;
+}
+.gl-submit {
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safe-b));
+  height: 58px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #22c55e, var(--gl));
+  color: #fff;
+  font-size: 16.5px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 -2px 0 rgba(0, 0, 0, 0.12),
+    0 18px 34px -14px rgba(21, 128, 61, 0.7);
+  transition: transform 0.12s;
+}
+.gl-submit:active {
+  transform: scale(0.98);
+}
+.gl-msgs {
+  display: grid;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+.gl-msgs .inline-error {
+  margin: 0 0 4px;
+}
+.gl-toast {
+  justify-self: start;
+  padding: 7px 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13.5px;
+  font-weight: 600;
+  animation: pop-in 0.25s var(--ease);
+}
+
+/* ------------------------------------------------------------------ formula bar */
+.gl-fx {
+  display: flex;
+  border-bottom: 1px solid var(--gl-line);
+  font-size: 13.5px;
+  line-height: 22px;
+}
+.gl-namebox {
+  flex: none;
+  width: 60px;
+  padding: 8px;
+  border-right: 1px solid var(--gl-line);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #3d4556;
+}
+.gl-fx-mark {
+  flex: none;
+  padding: 8px 10px;
+  border-right: 1px solid var(--gl-line);
+  color: #8a91a1;
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+.gl-fx-value {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ the grid */
+.gl-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+/* Separate borders, so the frozen columns carry theirs along as the grid scrolls under them. */
+.gridly .grid {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+.gridly .grid th,
+.gridly .grid td {
+  padding: 10px;
+  border-right: 1px solid var(--gl-line);
+  border-bottom: 1px solid var(--gl-line);
+  background: #fff;
+  text-align: left;
+  white-space: nowrap;
+}
+.gridly .grid tr > :last-child {
+  border-right: 0;
+}
+.gridly .letters th {
+  padding: 3px;
+  background: var(--gl-head);
+  color: #8a91a1;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.gridly .names th {
+  padding: 6px 6px 6px 10px;
+  background: #f8fafc;
+  font-weight: 750;
+}
+.gridly .names th.sorted {
+  background: #effbf3;
+}
+.gridly .corner,
+.gridly .rownum {
+  width: 56px;
+  min-width: 56px;
+  padding: 0 8px;
+  background: var(--gl-head);
+  color: #8a91a1;
+  font-size: 12px;
+}
+/* Row headers and names stay put while the other columns scroll sideways. */
+.gridly .corner,
+.gridly .rownum,
+.gridly .c-name {
+  position: sticky;
+  z-index: 1;
+}
+.gridly .corner,
+.gridly .rownum {
+  left: 0;
+  box-shadow: -2px 0 0 var(--gl-head); /* covers the sliver a fractional offset leaves at the edge */
+}
+.gridly .c-name {
+  left: 56px;
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 6px 0 8px -6px rgba(15, 18, 26, 0.18);
+}
+.gridly td.c-name {
+  font-weight: 650;
+}
+.gridly td.c-company {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gridly .rownum label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  cursor: pointer;
+}
+.gridly tbody tr {
+  cursor: pointer;
+}
+.gridly tbody tr:hover td {
+  background: #f8fafc;
+}
+.gridly tbody tr.sel td {
+  background: #e8f0ff;
+}
+.gridly tbody tr.sel .rownum {
+  background: #cfe0ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+.gridly .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.gridly .mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.colhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sortbtns {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid #d6dbe4;
+  border-radius: 10px;
+  background: #fff;
+}
+.sortbtns button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #6b7385;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.sortbtns button + button {
+  border-left: 1px solid #d6dbe4;
+}
+.sortbtns button:hover:not(.on) {
+  background: #f3f5f9;
+}
+.sortbtns button.on {
+  background: var(--gl);
+  color: #fff;
+}
+/* A real checkbox (keyboards, screen readers), drawn to match. */
+.gl-check {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid #b6becb;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+}
+.gl-check::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 0 2.5px 2.5px;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.15s var(--spring);
+}
+.gl-check:checked {
+  background: var(--gl);
+  border-color: var(--gl);
+}
+.gl-check:checked::after {
+  transform: rotate(-45deg) scale(1);
+}
+.gl-check:focus-visible {
+  outline: 2px solid var(--gl);
+  outline-offset: 2px;
+}
+.gl-foot {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  border-top: 1px solid var(--gl-line);
+  background: var(--gl-head);
+  font-size: 12.5px;
+}
+.gl-tab {
+  margin-top: -1px;
+  padding: 8px 18px;
+  border-right: 1px solid var(--gl-line);
+  border-bottom: 3px solid var(--gl);
+  background: #fff;
+  color: var(--gl-deep);
+  font-weight: 700;
+}
+.gl-status {
+  padding: 8px 12px;
+  color: var(--gl-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ Remove duplicates (a sheet on phones) */
+.gl-scrim {
+  position: fixed;
+  inset: var(--head-h) 0 0;
+  z-index: 29;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 18, 26, 0.45);
+  animation: fade 0.2s ease;
+}
+.gl-modal {
+  width: 100%;
+  max-height: calc(100% - 12px);
+  overflow: auto;
+  padding: 8px 18px calc(18px + var(--safe-b));
+  border-radius: 26px 26px 0 0;
+  background: #fff;
+  color: var(--gl-ink);
+  box-shadow: 0 -20px 50px -20px rgba(0, 0, 0, 0.45);
+  animation: sheet-up 0.38s var(--ease);
+}
+.gl-grip {
+  display: block;
+  width: 38px;
+  height: 5px;
+  margin: 2px auto 12px;
+  border-radius: 99px;
+  background: #d7dbe4;
+}
+.gl-modal h3 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.gl-modal p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.gl-modal p b {
+  color: var(--gl-ink);
+}
+.gl-modal-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 16px 0 18px;
+}
+.gl-modal-col {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1px solid var(--gl-line);
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.gl-modal-col.on {
+  border-color: var(--gl);
+  background: #f0fbf4;
+}
+.gl-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 10px;
+}
+.gl-btn {
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #d6dbe4;
+  border-radius: 15px;
+  background: #fff;
+  color: var(--gl-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+.gl-btn-primary {
+  border-color: var(--gl);
+  background: var(--gl);
+  color: #fff;
+}
+.replay .gl-modal {
+  padding-bottom: calc(96px + var(--safe-b));
+}
+
+/* ------------------------------------------------------------------ wide screens */
+@container game (min-width: 760px) {
+  .gl-scrim {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .gl-modal {
+    width: min(460px, 100%);
+    padding: 24px;
+    border-radius: 22px;
+    animation: sheet-pop 0.3s var(--ease);
+  }
+  .gl-grip {
+    display: none;
+  }
+  .gl-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .gl-btn {
+    height: 44px;
+  }
+  .replay .gl-modal {
+    padding-bottom: 24px;
+  }
+}
+@container game (min-width: 960px) {
+  .gridly {
+    padding-bottom: 0;
+  }
+  .gl-tb-more,
+  .gl-tb-grow {
+    display: inline;
+  }
+  .gl-tb-grow {
+    flex: 1;
+  }
+  .gl-tb {
+    height: 38px;
+  }
+  .gl-submit {
+    height: 40px;
+    padding: 0 20px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12);
+  }
+  .gridly .grid {
+    width: 100%;
+  }
+  .gridly .grid th,
+  .gridly .grid td {
+    padding: 8px 10px;
+  }
+  .gridly .c-name {
+    max-width: none;
+    box-shadow: none;
+  }
+  .gridly td.c-company {
+    max-width: none;
+  }
+  .sortbtns button {
+    width: 28px;
+    height: 26px;
+  }
+}
