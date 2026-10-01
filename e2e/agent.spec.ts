@@ -24,11 +24,12 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await solveShopping(page, run.seed);
   // The next briefing opens with the race's result and the standings.
   const result = page.getByTestId("brief-cleared");
-  await expect(result).toContainText(/✓ Shopping in \d+\.\ds/);
-  await expect(result).toContainText(/(You won by|It won by) \d+\.\ds\.|A dead heat\./);
-  await expect(result).toContainText(/Overall after 1 of 3: (you lead by|the agent leads by|level with the agent)/);
+  await expect(result).toContainText("✓ Shopping");
+  await expect(result.locator(".brief-verdict")).toHaveText(/^(You won by \d+\.\ds|.+ won by \d+\.\ds|A dead heat)$/);
   await ready(page);
   await solveCalendar(page, run.seed);
+  // From the second race on, it adds the standings.
+  await expect(result).toContainText(/After 2 of 3(You lead by \d+\.\ds|Agent leads by \d+\.\ds|Level)/);
   await ready(page);
   await solveSheet(page, run.seed);
   // The headline is the result; both sides show a time; the agent's API cost is listed.

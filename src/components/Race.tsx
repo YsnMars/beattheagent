@@ -5,6 +5,7 @@ import { stageElapsedAt, type DerivedRun } from "../game/run";
 import { useNow } from "../game/useRun";
 import { AgentCursor, buildMoves } from "./AgentCursor";
 import { TaskText } from "./GameScreen";
+import { formatDuration } from "../lib/format";
 import { gap, stageTime } from "./Outcome";
 
 const COUNT_MS = 800; // per number in the countdown
@@ -12,7 +13,7 @@ const COUNT_MS = 800; // per number in the countdown
 /**
  * The task for the stage that's about to start, on its own before the stage's app is in play. Each
  * stage is a race of its own, like a grand prix: the card opens with the result of the last one. The
- * clock is stopped meanwhile (the agent read its instructions on the clock, which the card says).
+ * clock is stopped meanwhile (the agent read its instructions on the clock).
  */
 export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: DerivedRun; ghost: RunSummary | null; onReady: () => void }) {
   const i = Math.min(run.stageIndex, STAGES.length - 1);
@@ -36,27 +37,28 @@ export function Briefing({ ch, run, ghost, onReady }: { ch: Challenge; run: Deri
       <div className="brief-card">
         {cleared !== null && <RaceResult run={run} ghost={ghost} i={cleared} />}
         <div className="brief-kicker">
-          Race {i + 1} of {STAGES.length} · {stage.app}
+          Race {i + 1} of {STAGES.length}
         </div>
         <h2 className="brief-title">{stage.title}</h2>
         <div className="brief-task task">
           <TaskText ch={ch} stage={stage.id} />
         </div>
-        {ghost && ghost.stagesCleared >= i && (
-          <p className="brief-agent">
-            <span className="agent-ink">{ghost.modelLabel}</span>'s cursor races you on the page.
+        <div className="brief-foot">
+          <p className="brief-note">
+            {ghost && ghost.stagesCleared >= i && (
+              <>
+                <span className="agent-ink">{ghost.modelLabel}</span>'s cursor races you on the page.{" "}
+              </>
+            )}
+            {!ghost && "The clock waits while you read."}
           </p>
-        )}
-        <button className="btn-primary brief-go" data-trace="brief:ready" onClick={onReady} autoFocus>
-          Ready
-          <kbd className="intro-kbd" aria-hidden>
-            Enter
-          </kbd>
-        </button>
-        <p className="brief-note">
-          The clock is stopped while you read.
-          {ghost && " The agent read its instructions on the clock, so this is a head start."}
-        </p>
+          <button className="btn-primary brief-go" data-trace="brief:ready" onClick={onReady} autoFocus>
+            Ready
+            <kbd className="intro-kbd" aria-hidden>
+              Enter
+            </kbd>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -95,35 +97,52 @@ export function GoFlash() {
   );
 }
 
-/** How the race just run went, and the standings after it (both times include wrong-answer penalties). */
+/**
+ * How the race just run went, and the standings after it (both times include wrong-answer penalties):
+ * the verdict as a headline, then the times as labelled stats like the HUD's scoreboard.
+ */
 function RaceResult({ run, ghost, i }: { run: DerivedRun; ghost: RunSummary | null; i: number }) {
   const title = STAGES[i].title;
   const yours = stageTime(run.splits, i)!;
   const theirs = ghost ? stageTime(ghost.splits, i) : null;
   const by = (ms: number) => (Math.abs(ms) < 100 ? null : gap(Math.abs(ms)));
-  let verdict = null;
-  if (ghost && theirs === null) verdict = <>{ghost.modelLabel} never finished this one.</>;
-  else if (ghost && theirs !== null) {
+  let verdict: string;
+  let lead: "you" | "agent" | "even" = "you";
+  if (!ghost) verdict = `Cleared in ${gap(yours)}`;
+  else if (theirs === null) verdict = `You won · ${ghost.modelLabel} never finished`;
+  else {
     const d = by(yours - theirs);
-    verdict = (
-      <>
-        {ghost.modelLabel}: <span className="agent-ink">{gap(theirs)}</span>. {d === null ? "A dead heat." : yours < theirs ? `You won by ${d}.` : `It won by ${d}.`}
-      </>
-    );
+    lead = d === null ? "even" : yours < theirs ? "you" : "agent";
+    verdict = d === null ? "A dead heat" : lead === "you" ? `You won by ${d}` : `${ghost.modelLabel} won by ${d}`;
   }
-  // Overall, over the races both have run.
-  const total = ghost && ghost.splits[i] !== undefined ? by(run.splits[i] - ghost.splits[i]) : null;
+  // Overall, over the races both have run (after the first race that's just the verdict again).
+  const both = i > 0 && ghost && ghost.splits[i] !== undefined;
+  const total = both ? by(run.splits[i] - ghost.splits[i]) : null;
   return (
     <div className="brief-result" data-testid="brief-cleared">
-      <p className="brief-cleared">
-        ✓ {title} in {gap(yours)}
-      </p>
-      {verdict && <p className="brief-verdict">{verdict}</p>}
-      {ghost && ghost.splits[i] !== undefined && (
-        <p className="brief-standing">
-          Overall after {i + 1} of {STAGES.length}:{" "}
-          {total === null ? "level with the agent" : run.splits[i] < ghost.splits[i] ? `you lead by ${total}` : `the agent leads by ${total}`}
-        </p>
+      <div className="brief-cleared">✓ {title}</div>
+      <p className={`brief-verdict lead-${lead}`}>{verdict}</p>
+      {ghost && (
+        <div className="brief-stats">
+          <div>
+            <span className="race-label">You</span>
+            <b>{formatDuration(yours)}</b>
+          </div>
+          <div>
+            <span className="race-label">{ghost.modelLabel}</span>
+            <b className="agent-ink">{theirs === null ? "—" : formatDuration(theirs)}</b>
+          </div>
+          {both && (
+            <div>
+              <span className="race-label">
+                After {i + 1} of {STAGES.length}
+              </span>
+              <b className="brief-standing">
+                {total === null ? "Level" : run.splits[i] < ghost.splits[i] ? `You lead by ${total}` : `Agent leads by ${total}`}
+              </b>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
