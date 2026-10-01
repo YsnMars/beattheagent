@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { STAGES } from "../challenge/types";
 import type { RunSummary } from "../game/agentRuns";
 import { PENALTY_MS, stageTime, type RunResult } from "../game/run";
+import { copyText } from "../lib/clipboard";
 import { formatDuration, formatUsd, gap } from "../lib/format";
 import { href } from "../lib/router";
 import { IconCheck, IconPlay, IconReplay, IconShare } from "./Icons";
@@ -211,15 +212,21 @@ function ShareButton({ text, seed }: { text: string; seed: string | null }) {
   const share = async () => {
     const data = { title: "Beat the Agent", text, url };
     if (navigator.share && (!navigator.canShare || navigator.canShare(data))) {
-      await navigator.share(data).catch(() => {});
-      return;
+      try {
+        await navigator.share(data);
+        return;
+      } catch (e) {
+        // Closing the sheet is a choice; anything else (a permissions policy, a webview) falls through to copying.
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
     }
-    try {
-      await navigator.clipboard.writeText(`${text} ${url}`);
+    const line = `${text} ${url}`;
+    if (await copyText(line)) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      /* clipboard blocked: nothing to do */
+    } else {
+      // No share sheet and no clipboard: hand over the line to copy by hand.
+      window.prompt("Copy this link to share it", line);
     }
   };
   return (
