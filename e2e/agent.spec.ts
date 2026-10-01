@@ -12,8 +12,11 @@ test("racing a recorded agent: ghost in the HUD, then a you-vs-agent summary", a
   await page.goto(`#/play/${run.seed}`);
   await expect(page.locator(".intro")).toContainText(run.modelLabel);
   await page.getByRole("button", { name: "Start", exact: true }).click();
-  await expect(page.locator(".ghost")).toBeVisible();
+  // The race status says who's ahead, not just where the agent is.
+  await expect(page.locator(".ghost")).toHaveText(/^(Agent (\d stages? ahead|also on \w+|finished · \d:\d\d\.\d)|You're \d stages? ahead)$/);
   await solveShopping(page, run.seed);
+  // Clearing a stage shows your gap to the agent at that point.
+  await expect(page.locator(".task-cleared")).toContainText(/(behind|ahead of|level with) the agent/);
   await solveCalendar(page, run.seed);
   await solveSheet(page, run.seed);
   // The headline is the result; both sides show a time; the agent's API cost is listed.
@@ -29,7 +32,7 @@ test("giving up shows where you stopped, next to the agent's full run", async ({
   await page.goto(`#/play/${run.seed}`);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await solveShopping(page, run.seed);
-  await expect(page.getByText("Stage 2 of 3 · Calendar")).toBeVisible();
+  await expect(page.locator('.stage-track [aria-current="step"]', { hasText: "Calendar" })).toBeVisible();
   await page.locator('[data-trace="hud:giveup"]').click();
   await page.getByRole("dialog", { name: "Give up this run?" }).getByRole("button", { name: "Give up" }).click();
   await expect(page.getByTestId("takeaway")).toContainText(/^You stopped on Calendar at \d:\d\d\.\d\. The agent (had finished by|finished in) \d:\d\d\.\d\.$/);
@@ -45,7 +48,7 @@ test("replay rebuilds the agent's run from its recorded log at the viewer's size
   await page.goto(`#/replay/${run.seed}`);
   await expect(page.getByRole("heading", { name: new RegExp(run.modelLabel) })).toBeVisible();
   // The real game UI, not a scaled-down frame: it fills the viewer's own viewport.
-  await expect(page.getByText("Stage 1 of 3 · Shopping")).toBeVisible();
+  await expect(page.locator('.stage-track [aria-current="step"]', { hasText: "Shopping" })).toBeVisible();
   const width = await page.locator(".replay-stage .game").evaluate((el) => el.getBoundingClientRect().width);
   expect(width).toBe(page.viewportSize()!.width);
   // The agent's current step is shown next to its cursor.

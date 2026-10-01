@@ -1,42 +1,53 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { STAGES, type Challenge, type StageId } from "../challenge/types";
-import { colList, sortLabel } from "../challenge/validate";
+import { SHEET_COLUMNS, STAGES, type Challenge, type StageId } from "../challenge/types";
+import { sortLabel } from "../challenge/validate";
 import { formatDay, formatDuration, formatMoney } from "../lib/format";
 import { elapsedAt, PENALTY_MS, type DerivedRun } from "../game/run";
 import type { AnyAction, CalAction, SheetAction, ShopAction } from "../game/state";
 import type { RunSummary } from "../game/agentRuns";
 import { Brand } from "./Intro";
+import { gap } from "./Outcome";
 import { Shopping } from "../stages/Shopping";
 import { Calendar, clashFor } from "../stages/Calendar";
 import { Sheet } from "../stages/Sheet";
 
+/** The task as a short lead-in plus one chip per requirement, so it can be re-checked at a glance. */
 export function TaskText({ ch, stage }: { ch: Challenge; stage: StageId }) {
+  let lead: ReactNode;
+  let rules: string[];
   if (stage === "shopping") {
     const s = ch.shopping;
-    return (
-      <p>
-        Buy <b>one</b> pair of headphones that costs <b>{formatMoney(s.budgetCents)} or less</b>, is rated <b>{s.minRating.toFixed(1)}★ or higher</b>, and
-        arrives <b>by {formatDay(s.deadline)}</b>. Then place the order.
-      </p>
+    lead = (
+      <>
+        Buy <b>one</b> pair of headphones that meets all three, then place the order.
+      </>
     );
-  }
-  if (stage === "calendar") {
+    rules = [`${formatMoney(s.budgetCents)} or less`, `${s.minRating.toFixed(1)}★ or higher`, `arrives by ${formatDay(s.deadline)}`];
+  } else if (stage === "calendar") {
     const c = ch.calendar;
     const clash = clashFor(c);
     const who = clash ? (clash.who.name === "You" ? "your" : `${clash.who.name.split(" ")[0]}'s`) : "someone's";
-    return (
-      <p>
-        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a new time <b>this week (Mon–Fri)</b> when <b>all {c.attendees.length} attendees are free</b>{" "}
-        and <b>within everyone's working hours</b>. It lasts <b>{c.durationMin} minutes</b> and starts on the hour or half hour. Then save.
-      </p>
+    lead = (
+      <>
+        “{c.meetingTitle}” now clashes with {who} calendar. Move it to a time that fits all of these, then save.
+      </>
     );
+    rules = [`${c.durationMin} minutes`, "this week (Mon–Fri)", `all ${c.attendees.length} attendees free`, "in everyone's working hours", "starts at :00 or :30"];
+  } else {
+    const sh = ch.sheet;
+    const cols = sh.dupColumns.map((k) => SHEET_COLUMNS.find((c) => c.key === k)!.label).join(" + ");
+    lead = <>Remove the duplicate rows and sort what's left, then submit the sheet.</>;
+    rules = [`duplicates = same ${cols} (any letter case)`, `keep the ${sh.keepRule.label} row`, `sort by ${sortLabel(sh.sort)}`];
   }
-  const sh = ch.sheet;
   return (
-    <p>
-      Rows are duplicates when their <b>{colList(sh.dupColumns)}</b> {sh.dupColumns.length > 1 ? "all match" : "matches"} (ignore letter case). From each
-      duplicate group keep only the <b>{sh.keepRule.label}</b> row. Then sort the remaining rows by <b>{sortLabel(sh.sort)}</b> and submit the sheet.
-    </p>
+    <>
+      <p>{lead}</p>
+      <ul className="rules">
+        {rules.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -65,7 +76,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
   const submit = onSubmit ?? noop;
   const fb = run.feedback && run.feedback.s === stage.id ? run.feedback : null;
   const recentClear =
-    run.feedback?.ok && run.stageIndex > 0 && run.feedback.s === STAGES[run.stageIndex - 1].id && now - run.feedback.at < 2600 ? run.feedback : null;
+    run.feedback?.ok && run.stageIndex > 0 && run.feedback.s === STAGES[run.stageIndex - 1].id && now - run.feedback.at < 4000 ? run.feedback : null;
   const recentPenalty = fb && !fb.ok && now - fb.at < 1600;
 
   return (
@@ -100,7 +111,7 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
               ))}
           </div>
           <div className="hud-right">
-            {ghost && <Ghost ghost={ghost} elapsed={elapsed} />}
+            {ghost && <Ghost ghost={ghost} elapsed={elapsed} youCleared={run.splits.length} />}
             <div className={`timer ${recentPenalty ? "penalty" : ""}`} aria-live="off">
               <span className="timer-value" data-testid="timer">
                 {formatDuration(elapsed)}
@@ -124,10 +135,23 @@ export function GameScreen({ ch, run, now, onAct, onSubmit, onGiveUp, onHome, gh
         {!done && (
           <section className="task" aria-live="polite">
             <div className="task-head">
-              <span className="task-kicker">
-                Stage {stageIndex + 1} of 3 · {stage.title}
-              </span>
-              {recentClear && <span className="task-cleared">✓ {recentClear.msg}</span>}
+              <ol className="stage-track" aria-label={`Stage ${stageIndex + 1} of 3`}>
+                {STAGES.map((s, i) => {
+                  const state = i < run.splits.length ? "done" : i === stageIndex ? "current" : "todo";
+                  return (
+                    <li key={s.id} className={state} aria-current={state === "current" ? "step" : undefined}>
+                      {state === "done" && <span aria-hidden>✓ </span>}
+                      {s.title}
+                    </li>
+                  );
+                })}
+              </ol>
+              {recentClear && (
+                <span className="task-cleared">
+                  ✓ {recentClear.msg}
+                  {ghost && <SplitGap run={run} ghost={ghost} stage={recentClear.s} />}
+                </span>
+              )}
             </div>
             <TaskText ch={ch} stage={stage.id} />
             {fb && !fb.ok && (
@@ -219,15 +243,49 @@ function Confirm({ trace, label, ariaLabel, triggerClass = "btn-text", title, bo
   );
 }
 
-/** Where the recorded agent run was at this point in time. */
-function Ghost({ ghost, elapsed }: { ghost: RunSummary; elapsed: number }) {
-  const cleared = ghost.splits.filter((s) => s <= elapsed).length;
+/** Where you stand against the recorded agent run at this point in time. */
+function Ghost({ ghost, elapsed, youCleared }: { ghost: RunSummary; elapsed: number; youCleared: number }) {
+  const agentCleared = ghost.splits.filter((s) => s <= elapsed).length;
+  const stages = (n: number) => `${n} stage${n > 1 ? "s" : ""}`;
   let text: string;
-  if (ghost.totalMs <= elapsed) text = ghost.finished ? `done in ${formatDuration(ghost.totalMs)}` : `stopped after ${ghost.stagesCleared}/3`;
-  else text = `on ${STAGES[Math.min(cleared, 2)].title}`;
+  let lead: "agent" | "you" | "even";
+  if (ghost.totalMs <= elapsed) {
+    text = ghost.finished ? `Agent finished · ${formatDuration(ghost.totalMs)}` : `Agent stopped after ${ghost.stagesCleared}/3`;
+    lead = ghost.finished ? "agent" : "you";
+  } else if (agentCleared > youCleared) {
+    text = `Agent ${stages(agentCleared - youCleared)} ahead`;
+    lead = "agent";
+  } else if (agentCleared < youCleared) {
+    text = `You're ${stages(youCleared - agentCleared)} ahead`;
+    lead = "you";
+  } else {
+    text = `Agent also on ${STAGES[Math.min(agentCleared, 2)].title}`;
+    lead = "even";
+  }
   return (
-    <div className="ghost" title="Where the recorded agent run was at this point in time">
-      Agent <b>{text}</b>
+    <div className={`ghost lead-${lead}`} title="Where the recorded agent run was at this point in time">
+      {text}
     </div>
+  );
+}
+
+/** Your gap to the agent when you cleared a stage, like a split time in a race. */
+function SplitGap({ run, ghost, stage }: { run: DerivedRun; ghost: RunSummary; stage: StageId }) {
+  const i = STAGES.findIndex((s) => s.id === stage);
+  const yours = run.splits[i];
+  const theirs = ghost.splits[i];
+  if (yours === undefined || theirs === undefined) return null;
+  const d = yours - theirs;
+  if (Math.abs(d) < 100) return <span className="split-gap even"> · level with the agent</span>;
+  return d > 0 ? (
+    <span className="split-gap behind" data-testid="split-gap">
+      {" "}
+      · {gap(d)} behind the agent
+    </span>
+  ) : (
+    <span className="split-gap ahead" data-testid="split-gap">
+      {" "}
+      · {gap(-d)} ahead of the agent
+    </span>
   );
 }
